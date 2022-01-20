@@ -1,0 +1,33 @@
+BOOTSTRAP               Bootstrap procedure of Cavaliere et al. (2012)
+                        to determine cointegration rank
+Bartlettcorrection      Function to do ...
+LRtest                  Likelihood ratio test of restrictions on alpha
+                        and beta
+NTS_ALPHAProcrusted     Function to estimate alpha
+NTS_BETA                Functions to estimate beta and Omega
+NTS_GAMMAFIXEDLassoReg
+                        Functions to estimate GAMMA, using L1 PENALTY,
+                        fixed value of lmabda.gamma
+NTS_GAMMALassoReg       Function to estimate Gamma, using L1 penalty
+SparseCointegration_Lasso
+                        Main function to perform sparse cointegration
+SparseCointegration_RSC
+                        Sparse cointegration function used in
+                        determine_rank function
+bootstrap               Bootstrap loop
+determine_rank          Function to determine the cointegration rank
+                        using the rank selection criterion
+f                       Cointegration relationship vector for
+                        phi-process
+g                       Deterministic part of dGamma
+hello                   Hello, World!
+hilbert                 Performs Hilbert transform
+johansen                Johansen procedure
+johansenCpp             Johansen procedure in Cpp
+meanPhaseCoherence      Mean phase coherence measure
+oscillator              Simulation of a vector oscillator
+rankTest                Test of the cointegration rank
+unwrapPhase             Unwraps phase process of an oscillator.
+var                     Estimation for a VAR model (if r = 0)
+vecm                    Core C++ routine for estimation parameters of
+                        VEC model by Johansen procedure

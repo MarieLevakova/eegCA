@@ -1,0 +1,3 @@
+exportPattern("^[[:alpha:]]+")
+useDynLib(eegCA)
+import(mvtnorm, glmnet, MASS, glasso, lars, huge, ggplot2, ggforce, cowplot, Matrix)
