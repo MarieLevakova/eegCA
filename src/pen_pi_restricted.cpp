@@ -138,20 +138,19 @@ arma::mat penPiLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init, double la
 // based on average error of 1-step forecast
 // INPUT:
 //   yt - multivariate time series
-//   PI.init - initial value of Pi
-//   MU.init - initial value of mu
-//   lambda.seq - sequence of allowed regularization parameters
-//   w - weights employed in the iterative procedure
+//   nlambda - length of lambda sequence
+//   lambda_min - minimum lambda in the sequence
 //   r - rank of Pi
-//   cutoff -  minimum proportion of training data
-//   maxiter - number of iterations - full estimation of PI and MU
-//   maxiter.i - number of iterations for each given estimate of mu
-//   final.zeros - performs a final step pushing zeros into the matrix,
-//                 consisting of elementwise soft-thresholding, NOT doing gradient-descent, and keeping r layers of SVD
+//   maxiter - number of iterations
+//   crit - numerical value representing the method to choose lambda
+//   dt - timestep
+//   w_auto - should weights be chosen by the optimizing procedure, or a fixed sequence
+//   n_cv - number of repetitions of the crossvalidation procedure
 // OUTPUT:
-//   PI - estimate of Pi
-//   MU - estimate of mu
-//   lambda - selected value of the regularization parameter
+//   mat_output - a matrix containing:
+//                            Pi, mu, Omega, chosen lambda, iterations of Pi,
+//                            sequence of values of the objective function, weights,
+//                            full sequence of lambdas, value of the criteria to choose lambda
 
 // [[Rcpp::depends(RcppArmadillo)]]
 
@@ -195,6 +194,7 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
 
       mat pen_out = penPiLoop(Ystd, Zstd, Pi_init, lambda, r, maxiter, w_auto);
       Pi_restricted = pen_out(span(0, p-1), span(0, p-1));
+      Pi_init = Pi_restricted;
 
       int k = accu(conv_to<imat>::from(Pi_restricted!=zeros<mat>(p,p)));
       mat res = Ystd - Zstd * Pi_restricted;
@@ -230,6 +230,7 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
           lambda = lambda_seq(i);
           mat pen_out = penPiLoop(Ystd_cv, Zstd_cv, Pi_init, lambda, r, maxiter, w_auto);
           Pi_restricted = pen_out(span(0,p-1), span(0,p-1));
+          Pi_init = Pi_restricted;
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
           cv(i) = cv(i) + trace(res*res.t())/(N*p*n_cv);
         }

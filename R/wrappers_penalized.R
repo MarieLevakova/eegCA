@@ -173,6 +173,33 @@ pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
               lambda.seq = lambda.seq, crit = crit, crit.seq = crit.seq))
 }
 
+pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12, maxiter = 100,
+                              dt = 1, crit = "CV", n.cv = 100){
+
+  p <- dim(X)[2]
+
+  # Translating crit from a string to an integer value
+  crit.vector <- c("CV", "AIC", "BIC", "HQ")
+  crit.int <- which(crit.vector ==  crit) - 1
+
+  # Calling cpp function
+  out <- penNuclearCpp(X, n.lambda, lambda.min, maxiter, crit.int, dt, n.cv)
+
+  # Extracting results from the cpp output
+  PI <- out[1:p,1:p]
+  MU <- out[1:p,p+1]
+  OMEGA <- out[1:p,(p+2):(2*p+1)]
+  lambda <- out[1,2*p+2]
+  PI.iter <- out[(p+1):(p+maxiter-1),1:(p^2)]
+  objective.iter <- out[(p+1):(p+maxiter-1),p^2+1]
+  lambda.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),1]
+  crit.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),2]
+
+  return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
+              PI.iter = PI.iter, objective.iter = objective.iter,
+              lambda.seq = lambda.seq, crit = crit, crit.seq = crit.seq))
+}
+
 # Penalty on beta
 pen.beta <- function(X, r, max.iter = 10, conv = 10^-2, nlambda = 100, n.cv = 20,
                      glmnetthresh = 1e-04, dt = 1, equal.penalty = F){
@@ -215,22 +242,25 @@ pen.beta <- function(X, r, max.iter = 10, conv = 10^-2, nlambda = 100, n.cv = 20
   Zstd <- (Z - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanZ)))
 
   # Starting value
-  fit0 <- johansenAggregated(Y = Ystd, Z = Zstd, r = r, dt = dt, intercept = F, normalize = F)
-  beta.init <- fit0$beta
-  alpha.init <- fit0$alpha*dt
-  Omega.init <- fit0$Omega*dt
-  Pi.init <- matrix(fit0$alpha, ncol = r) %*% t(matrix(fit0$beta, ncol = r)) * dt
+  # fit0 <- johansenAggregated(Y = Ystd, Z = Zstd, r = r, dt = dt, intercept = F, normalize = F)
+  # beta.init <- fit0$beta
+  mm <- diag(as.vector(1/sdZ^2)) %*% cov(Zstd, Ystd) %*% diag(as.vector(1/sdY^2)) %*% cov(Ystd, Zstd)
+  beta.init <- matrix(eigen(mm)$vectors[,1:r], ncol = r)
+  alpha.init <- t(coef(lm(Ystd ~ I(Zstd %*% beta.init)-1)))
+  Pi.init <- matrix(alpha.init, ncol = r) %*% t(matrix(beta.init, ncol = r))
   mu.init <- meanY - Pi.init %*% as.matrix(meanZ, ncol = 1)
+  RESID <- Y - matrix(1, nrow = N, ncol = 1) %*% t(mu.init) - Z %*% t(Pi.init)
+  Omega.init <- (t(RESID) %*% RESID)/N
 
   # Convergence parameters: initialization
   it <- 1
   diff.obj <- 10*conv
   value.obj <- matrix(NA, ncol = 1, nrow = max.iter+1)
-  Pi.it <- matrix(NA, ncol = p^2, nrow = max.iter + 1)
+  Pi.it <- matrix(NA, ncol = p*r, nrow = max.iter + 1)
 
   RESID <- Y - Z %*% t(Pi.init) - matrix(1, nrow = N, ncol = 1) %*% matrix(mu.init, nrow = 1)
   value.obj[1,] <- (1/N)*sum(diag(RESID %*% solve(Omega.init) %*% t(RESID))) + log(det(Omega.init))
-  Pi.it[1,] <- matrix(Pi.init, nrow = 1)
+  Pi.it[1,] <- matrix(alpha.init, nrow = 1)
 
   while((it < max.iter) &  (diff.obj > conv)){
     # Obtain Alpha
@@ -253,7 +283,7 @@ pen.beta <- function(X, r, max.iter = 10, conv = 10^-2, nlambda = 100, n.cv = 20
 
     value.obj[1+it,] <- (1/N)*sum(diag((RESID) %*% solve(Omega.init) %*% t(RESID))) + log(det(Omega.init))
     diff.obj <- abs(value.obj[1+it,] - value.obj[it,])/abs(value.obj[it,])
-    Pi.it[1+it,] <- matrix(Pi.init, nrow = 1)
+    Pi.it[1+it,] <- matrix(alpha.init, nrow = 1)
     it <- it + 1
 
   }
