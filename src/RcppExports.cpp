@@ -230,19 +230,21 @@ BEGIN_RCPP
 END_RCPP
 }
 // penNuclearCpp
-arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min, int maxiter, int crit, double dt, int n_cv);
-RcppExport SEXP _eegCA_penNuclearCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP maxiterSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP) {
+arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min, int miniter, int maxiter, int crit, double dt, int n_cv, double thresh);
+RcppExport SEXP _eegCA_penNuclearCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP miniterSEXP, SEXP maxiterSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP, SEXP threshSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat >::type X(XSEXP);
     Rcpp::traits::input_parameter< int >::type n_lambda(n_lambdaSEXP);
     Rcpp::traits::input_parameter< double >::type lambda_min(lambda_minSEXP);
+    Rcpp::traits::input_parameter< int >::type miniter(miniterSEXP);
     Rcpp::traits::input_parameter< int >::type maxiter(maxiterSEXP);
     Rcpp::traits::input_parameter< int >::type crit(critSEXP);
     Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
     Rcpp::traits::input_parameter< int >::type n_cv(n_cvSEXP);
-    rcpp_result_gen = Rcpp::wrap(penNuclearCpp(X, n_lambda, lambda_min, maxiter, crit, dt, n_cv));
+    Rcpp::traits::input_parameter< double >::type thresh(threshSEXP);
+    rcpp_result_gen = Rcpp::wrap(penNuclearCpp(X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -291,7 +293,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_eegCA_oscillator", (DL_FUNC) &_eegCA_oscillator, 11},
     {"_eegCA_penAlphaCpp", (DL_FUNC) &_eegCA_penAlphaCpp, 11},
     {"_eegCA_penAlphaCppAggregated", (DL_FUNC) &_eegCA_penAlphaCppAggregated, 12},
-    {"_eegCA_penNuclearCpp", (DL_FUNC) &_eegCA_penNuclearCpp, 7},
+    {"_eegCA_penNuclearCpp", (DL_FUNC) &_eegCA_penNuclearCpp, 9},
     {"_eegCA_accu2", (DL_FUNC) &_eegCA_accu2, 1},
     {"_eegCA_penPiCpp", (DL_FUNC) &_eegCA_penPiCpp, 9},
     {NULL, NULL, 0}

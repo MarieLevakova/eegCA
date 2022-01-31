@@ -173,8 +173,8 @@ pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
               lambda.seq = lambda.seq, crit = crit, crit.seq = crit.seq))
 }
 
-pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12, maxiter = 100,
-                              dt = 1, crit = "CV", n.cv = 100){
+pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12, miniter = 10, maxiter = 100,
+                              dt = 1, crit = "CV", n.cv = 100, thresh = 1e-6){
 
   p <- dim(X)[2]
 
@@ -183,7 +183,7 @@ pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12, maxiter = 100,
   crit.int <- which(crit.vector ==  crit) - 1
 
   # Calling cpp function
-  out <- penNuclearCpp(X, n.lambda, lambda.min, maxiter, crit.int, dt, n.cv)
+  out <- penNuclearCpp(X, n.lambda, lambda.min, miniter, maxiter, crit.int, dt, n.cv, thresh)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]
@@ -194,10 +194,13 @@ pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12, maxiter = 100,
   objective.iter <- out[(p+1):(p+maxiter-1),p^2+1]
   lambda.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),1]
   crit.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),2]
+  Pi.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),3:(p^2+2)]
+  iter.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),p^2+3]
 
   return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
               PI.iter = PI.iter, objective.iter = objective.iter,
-              lambda.seq = lambda.seq, crit = crit, crit.seq = crit.seq))
+              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq),
+              Pi.seq = Pi.seq, iter.seq = iter.seq))
 }
 
 # Penalty on beta
