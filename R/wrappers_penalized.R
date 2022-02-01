@@ -167,10 +167,12 @@ pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
   w <- out[(p+1):(p+maxiter),p^2+2]
   lambda.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),1]
   crit.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),2]
+  Pi.seq <- out[(p+maxiter+1):(p+maxiter+n.lambda),3:(p^2+2)]
 
   return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
               PI.iter = PI.iter, objective.iter = objective.iter, w = w,
-              lambda.seq = lambda.seq, crit = crit, crit.seq = crit.seq))
+              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq),
+              Pi.seq = Pi.seq))
 }
 
 pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12, miniter = 10, maxiter = 100,

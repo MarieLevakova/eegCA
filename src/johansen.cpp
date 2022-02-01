@@ -261,7 +261,6 @@ arma::mat vecmAggregated(arma::mat Z0, arma::mat Z1, int r, arma::mat A, arma::m
   // eig_gen(eigval_cx, eigvec_cx, S10*S00_1*S01); // decomposition into eigenvalues and eigenvectors
   eig_gen(eigval_cx, eigvec_cx, solveMat); // decomposition into eigenvalues and eigenvectors
 
-
   // C++ function returns complex vectors/matrices, so extract real parts
   vec eigval = real(eigval_cx);
   mat eigvec = real(eigvec_cx);
@@ -282,14 +281,13 @@ arma::mat vecmAggregated(arma::mat Z0, arma::mat Z1, int r, arma::mat A, arma::m
     }
   }
 
-
   // To use cumsum for the teststats, the eigenvalues must be sorted "in reverse", this is ascending...
   vec testStat = -N*cumsum(log(1-eigval(sort_index(eigval,"ascend")))); // This is the standard test of H(r) versus H(p) in an unrestricted model.
   vec testStat2 = -N*log(1-eigval(sort_index(eigval,"ascend"))); // This is the standard test of H(r) versus H(p) in an unrestricted model.
 
-  testStat = sort(testStat,"descend");
-  testStat2 = sort(testStat2,"descend");
-  //uvec idx = linspace<uvec>(0, r-1, 1);
+  // testStat = sort(testStat,"descend");
+  // testStat2 = sort(testStat2,"descend");
+  uvec idx = linspace<uvec>(0, r-1, 1);
 
   // Normalize beta using c {p x r} = (I{r x r},0{()p-r) x r})
   mat b_hat = B*eigvec.cols(0,r-1);
