@@ -165,6 +165,36 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// penreg_Rcpp
+arma::vec penreg_Rcpp(arma::vec Y, arma::mat X, double lambda, arma::vec beta0, Rcpp::List control);
+RcppExport SEXP _eegCA_penreg_Rcpp(SEXP YSEXP, SEXP XSEXP, SEXP lambdaSEXP, SEXP beta0SEXP, SEXP controlSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta0(beta0SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type control(controlSEXP);
+    rcpp_result_gen = Rcpp::wrap(penreg_Rcpp(Y, X, lambda, beta0, control));
+    return rcpp_result_gen;
+END_RCPP
+}
+// penreg_Rcpp_XY
+arma::vec penreg_Rcpp_XY(arma::vec XY, arma::mat XX, double lambda, arma::vec beta0, Rcpp::List control);
+RcppExport SEXP _eegCA_penreg_Rcpp_XY(SEXP XYSEXP, SEXP XXSEXP, SEXP lambdaSEXP, SEXP beta0SEXP, SEXP controlSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type XY(XYSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type XX(XXSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type beta0(beta0SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type control(controlSEXP);
+    rcpp_result_gen = Rcpp::wrap(penreg_Rcpp_XY(XY, XX, lambda, beta0, control));
+    return rcpp_result_gen;
+END_RCPP
+}
 // oscillator
 arma::mat oscillator(int N, float dt, arma::vec z0, arma::mat alpha, arma::mat beta, arma::vec omega, arma::vec freq, arma::vec lvl, arma::mat S_phi, arma::mat S_gam, const char* model);
 RcppExport SEXP _eegCA_oscillator(SEXP NSEXP, SEXP dtSEXP, SEXP z0SEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP omegaSEXP, SEXP freqSEXP, SEXP lvlSEXP, SEXP S_phiSEXP, SEXP S_gamSEXP, SEXP modelSEXP) {
@@ -278,6 +308,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// surr_fit_Rcpp
+Rcpp::List surr_fit_Rcpp(arma::mat Y, arma::mat X, double lambda, arma::vec U0, arma::vec V0, arma::vec WU, arma::vec WV, arma::mat Xtran, Rcpp::List control, int n_cv);
+RcppExport SEXP _eegCA_surr_fit_Rcpp(SEXP YSEXP, SEXP XSEXP, SEXP lambdaSEXP, SEXP U0SEXP, SEXP V0SEXP, SEXP WUSEXP, SEXP WVSEXP, SEXP XtranSEXP, SEXP controlSEXP, SEXP n_cvSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type U0(U0SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type V0(V0SEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type WU(WUSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type WV(WVSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type Xtran(XtranSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type control(controlSEXP);
+    Rcpp::traits::input_parameter< int >::type n_cv(n_cvSEXP);
+    rcpp_result_gen = Rcpp::wrap(surr_fit_Rcpp(Y, X, lambda, U0, V0, WU, WV, Xtran, control, n_cv));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_eegCA_betaEigen", (DL_FUNC) &_eegCA_betaEigen, 3},
@@ -290,12 +340,15 @@ static const R_CallMethodDef CallEntries[] = {
     {"_eegCA_johansenCppAggregated", (DL_FUNC) &_eegCA_johansenCppAggregated, 8},
     {"_eegCA_vecmEigen", (DL_FUNC) &_eegCA_vecmEigen, 1},
     {"_eegCA_vecmEigenAggregated", (DL_FUNC) &_eegCA_vecmEigenAggregated, 2},
+    {"_eegCA_penreg_Rcpp", (DL_FUNC) &_eegCA_penreg_Rcpp, 5},
+    {"_eegCA_penreg_Rcpp_XY", (DL_FUNC) &_eegCA_penreg_Rcpp_XY, 5},
     {"_eegCA_oscillator", (DL_FUNC) &_eegCA_oscillator, 11},
     {"_eegCA_penAlphaCpp", (DL_FUNC) &_eegCA_penAlphaCpp, 11},
     {"_eegCA_penAlphaCppAggregated", (DL_FUNC) &_eegCA_penAlphaCppAggregated, 12},
     {"_eegCA_penNuclearCpp", (DL_FUNC) &_eegCA_penNuclearCpp, 9},
     {"_eegCA_accu2", (DL_FUNC) &_eegCA_accu2, 1},
     {"_eegCA_penPiCpp", (DL_FUNC) &_eegCA_penPiCpp, 9},
+    {"_eegCA_surr_fit_Rcpp", (DL_FUNC) &_eegCA_surr_fit_Rcpp, 10},
     {NULL, NULL, 0}
 };
 

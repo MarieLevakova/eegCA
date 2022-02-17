@@ -41,6 +41,14 @@ vecmEigenAggregated <- function(Z0, Z1) {
     .Call('_eegCA_vecmEigenAggregated', PACKAGE = 'eegCA', Z0, Z1)
 }
 
+penreg_Rcpp <- function(Y, X, lambda, beta0, control) {
+    .Call('_eegCA_penreg_Rcpp', PACKAGE = 'eegCA', Y, X, lambda, beta0, control)
+}
+
+penreg_Rcpp_XY <- function(XY, XX, lambda, beta0, control) {
+    .Call('_eegCA_penreg_Rcpp_XY', PACKAGE = 'eegCA', XY, XX, lambda, beta0, control)
+}
+
 oscillator <- function(N, dt, z0, alpha, beta, omega, freq, lvl, S_phi, S_gam, model) {
     .Call('_eegCA_oscillator', PACKAGE = 'eegCA', N, dt, z0, alpha, beta, omega, freq, lvl, S_phi, S_gam, model)
 }
@@ -63,5 +71,9 @@ accu2 <- function(obj) {
 
 penPiCpp <- function(X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv) {
     .Call('_eegCA_penPiCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv)
+}
+
+surr_fit_Rcpp <- function(Y, X, lambda, U0, V0, WU, WV, Xtran, control, n_cv) {
+    .Call('_eegCA_surr_fit_Rcpp', PACKAGE = 'eegCA', Y, X, lambda, U0, V0, WU, WV, Xtran, control, n_cv)
 }
 
