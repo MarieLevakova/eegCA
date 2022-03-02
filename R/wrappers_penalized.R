@@ -43,8 +43,8 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   lambda.max <- 0
   lambda.min <- NA
   for(i.r in 1:p){
-    penalty.factor <- rep(0, p)
-    penalty.factor[i.r] <- 1
+    penalty.factor <- rep(1, p)
+    penalty.factor[i.r] <- 0
     determine_lambdasequence <- glmnet(y = Ystd[,i.r], x = Zstd,
                                        intercept = F,
                                        family = "gaussian",
@@ -63,8 +63,8 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
     if(crit=="AIC"){
       aic <- rep(NA, n.lambda)
       for(i.r in 1:p){
-        penalty.factor <- rep(0, p)
-        penalty.factor[i.r] <- 1
+        penalty.factor <- rep(1, p)
+        penalty.factor[i.r] <- 0
         determine_lambda <- glmnet(y = Ystd[,i.r], x = Zstd,
                                    intercept = F,
                                    family = "gaussian",
@@ -87,8 +87,8 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
     if(crit=="BIC"){
       bic <- rep(NA, n.lambda)
       for(i.r in 1:p){
-        penalty.factor <- rep(0, p)
-        penalty.factor[i.r] <- 1
+        penalty.factor <- rep(1, p)
+        penalty.factor[i.r] <- 0
         determine_lambda <- glmnet(y = Ystd[,i.r], x = Zstd,
                                    intercept = F,
                                    family = "gaussian",
@@ -111,8 +111,8 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
     if(crit=="HQ"){
       hq <- rep(NA, n.lambda)
       for(i.r in 1:p){
-        penalty.factor <- rep(0, p)
-        penalty.factor[i.r] <- 1
+        penalty.factor <- rep(1, p)
+        penalty.factor[i.r] <- 0
         determine_lambda <- glmnet(y = Ystd[,i.r], x = Zstd,
                                    intercept = F,
                                    family = "gaussian",
@@ -136,8 +136,8 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
       cv <- rep(0, n.lambda)
       for(i.cv in 1:n.cv){
         for(i.r in 1:p){
-          penalty.factor <- rep(0, p)
-          penalty.factor[i.r] <- 1
+          penalty.factor <- rep(1, p)
+          penalty.factor[i.r] <- 0
           determine_lambda <- cv.glmnet(y = Ystd[,i.r], x = Zstd,
                                         intercept = F,
                                         family = "gaussian",
@@ -153,6 +153,8 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   # Fit the final model
 
   for(i.r in 1:p){
+    penalty.factor <- rep(1, p)
+    penalty.factor[i.r] <- 0
     LASSOfinal <- glmnet(y = Ystd[,i.r], x = Zstd,
                          standardize = F,
                          intercept = F, lambda = lambda.seq,
@@ -435,67 +437,163 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 20
 }
 
 
-# pen.PiAggregated <- function(Y, Z, Pi.init, lambda.seq = rep(0, 100), w, r, cutoff, maxiter = 10,
-#                    crit = "CV", lambda.default = T, final.zeros = T,
-#                    dt = 1){
-#   p <- dim(Y)[2]
-#
-#   # Translating crit from a string to an integer value
-#   crit.vector <- c("CV", "AIC", "BIC", "HQ")
-#   crit.int <- which(crit.vector ==  crit) - 1
-#
-#   # Calling cpp function
-#   out <- penPiCppAggregated(Y, Z, Pi.init, lambda.seq, w, r, cutoff, maxiter,
-#                   crit.int, lambda.default, final.zeros)
-#
-#   # Extracting results from the cpp output
-#   PI <- out[1:p,1:p]
-#   MU <- out[p+1,]
-#   lambda.opt <- out[p+2,1]
-#
-#   return(list(PI = PI/dt, MU = MU/dt, lambda.opt = lambda.opt))
-# }
-#
-# pen.alphaAggregated <- function(Y, Z, r, alpha.init = NULL, beta.init = NULL, crit = "CV",
-#                       maxiter = 10, conv = 0.01,
-#                       rho_glasso = seq(1, 0.1, length = 5),
-#                       cutoff = 0.8, glmnetthresh = 1e-04, dt = 1){
-#
-#   p <- dim(Y)[2]
-#
-#   # Translating crit from a string to an integer value
-#   crit.vector <- c("CV", "AIC", "BIC", "HQ")
-#   crit.int <- which(crit.vector ==  crit) - 1
-#
-#   if(is.null(alpha.init) & is.null(beta.init)){
-#     alpha.init <- beta.init <- matrix(0, nrow = p, ncol = r)
-#     calculate.ab <- TRUE
-#   } else {
-#     calculate.ab <- FALSE
-#   }
-#
-#   # Calling cpp function
-#   out <- penAlphaCppAggregated(Y, Z, r, alpha.init, beta.init, crit.int,
-#                      rho_glasso, maxiter, conv,
-#                      cutoff, glmnetthresh, calculate.ab)
-#
-#   # Extracting results from the cpp output
-#
-#   if(r==0){
-#     ALPHA <- matrix(0, nrow = p, ncol = 1)
-#     BETA <- matrix(0, nrow = p, ncol = 1)
-#     MU <- out[1,]
-#     OMEGA <- t(out[2:(p+1),])
-#     it <- out[p+2,1]
-#   } else {
-#     MU <- out[1,]
-#     ALPHA <- t(out[2:(r+1),])
-#     BETA <- t(out[(r+2):(2*r+1),])
-#     OMEGA <- t(out[(2*r+2):(2*r+p+1),])
-#     it <- out[2*r+p+2,1]
-#   }
-#   PI <- ALPHA %*% t(BETA)
-#   lambda.opt <- out[2*r+p+3,1]
-#
-#   return(list(ALPHA = ALPHA/dt, BETA = BETA, PI = PI/dt, OMEGA = OMEGA/dt, MU = MU/dt, it = it))
-# }
+# Unrestricted penalized estimation of Pi
+pen.qr <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
+                                lambda, n.lambda = 100, n.cv = 10, thresh = 1e-12,
+                                maxit = 1e6, dt = 1, psi = 2){
+  Y <- diff(yt)
+  N <- dim(Y)[1]
+  p <- dim(Y)[2]
+  Z <- yt[1:N,]
+
+  # Standardize variables
+  meanY <- apply(Y, 2, mean)
+  sdY <- apply(Y, 2, sd)
+  Ystd <- (Y - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanY))) %*% diag(1/sdY)
+
+  meanZ <- apply(Z, 2, mean)
+  sdZ <- apply(Z, 2, sd)
+  Zstd <- (Z - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanZ))) %*% diag(1/sdZ)
+
+  # Preliminary OLS estimate
+  Pi0 <- PI.OLS(Ystd, Zstd, dt = dt, intercept = F)$PI
+  QR.Pi0 <- qr(t(Pi0))
+  Smat <- qr.Q(QR.Pi0)
+  Rmat <- qr.R(QR.Pi0)
+
+  # Construct a new predictor matrix
+  ZS <- Zstd %*%Smat
+
+  R.Sparse <- matrix(NA, nrow = p, ncol = p)
+
+  # Determine the lambda sequence
+  penalty.factor <- rep(NA, p)
+  for(i in 1:p){
+    penalty.factor[i] <- sqrt(sum((Rmat[i,i:p])^2))
+  }
+  determine_lambdasequence <- glmnet(y = Ystd, x = ZS,
+                                     intercept = F,
+                                     penalty.factor = penalty.factor^psi,
+                                     family = "mgaussian")
+
+  lambda.seq <- determine_lambdasequence$lambda
+  n.lambda <- length(lambda.seq)
+
+  if(crit=="fixed"){
+    lambda.opt[i.r] <- lambda
+  } else {
+
+
+    if(crit!="CV"){
+      R.select <- array(0, dim = c(p, p, n.lambda))
+      for(i in 1:p){
+        R.select[,i,] <- as.matrix(determine_lambdasequence$beta[[i]])
+      }
+
+      aic <- rep(NA, n.lambda)
+      bic <- rep(NA, n.lambda)
+      hq <- rep(NA, n.lambda)
+      for(ii in 1:n.lambda){
+        N <- dim(Ystd)[1]
+        k <- sum((Smat %*% R.select[,,ii])!=0)
+        res <- Ystd - ZS %*% R.select[,,ii]
+        Omega.select <- (t(res) %*% res)/N
+        Omega.inv <- solve(Omega.select)
+        aic[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + 2*k +
+          sum(diag(res %*% Omega.inv %*% t(res)))
+        bic[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + k*log(N*p) +
+          sum(diag(res %*% Omega.inv %*% t(res)))
+        hq[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + 2*k*log(log(N*p)) +
+          sum(diag(res %*% Omega.inv %*% t(res)))
+      }
+      if(crit=="AIC"){
+        lambda.opt <- lambda.seq[which.min(aic)]
+      }
+      if(crit=="BIC"){
+        lambda.opt <- lambda.seq[which.min(bic)]
+      }
+      if(crit=="HQ"){
+        lambda.opt <- lambda.seq[which.min(hq)]
+      }
+    }
+    if(crit=="CV"){
+      cv <- rep(0, n.lambda)
+      for(i.cv in 1:n.cv){
+        determine_lambda <- cv.glmnet(y = Ystd, x = ZS,
+                                      intercept = F,
+                                      penalty.factor = penalty.factor^psi,
+                                      family = "mgaussian")
+        cv <- cv + 1/(n.cv*p)*determine_lambda$cvm
+      }
+      lambda.opt <- lambda.seq[which.min(cv)]
+    }
+  }
+
+  # Fit the final model
+
+  LASSOfinal <- glmnet(y = Ystd, x = ZS,
+                       intercept = F,
+                       penalty.factor = penalty.factor^psi,
+                       family = "mgaussian")
+  R.Sparse <- matrix(0, nrow = p, ncol = p)
+  for(i in 1:p){
+    R.Sparse[,i] <- as.matrix(coef(LASSOfinal, s = lambda.opt)[[i]])[-1]
+  }
+  PI.Sparse <- t(Smat %*% R.Sparse)
+  for(i in 1:p){
+    PI.Sparse[,i] <- PI.Sparse[,i] %*% diag(sdY[i]/sdZ)
+  }
+
+  mu.hat <- meanY - PI.Sparse %*% as.matrix(meanZ, ncol =1)
+  res <- Y - matrix(1, nrow = N, ncol = 1) %*% t(mu.hat) - Z %*% t(PI.Sparse)
+  Omega.hat <- (t(res) %*% res)/N
+
+  return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt))
+}
+
+pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.cv = 100){
+
+  p <- dim(X)[2]
+
+  # Translating crit from a string to an integer value
+  crit.vector <- c("CV", "AIC", "BIC", "HQ")
+  crit.int <- which(crit.vector ==  crit) - 1
+
+  # Calling cpp function
+  out <- penRankCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv)
+
+  # Extracting results from the cpp output
+  PI <- out[1:p,1:p]
+  MU <- out[1:p,p+1]
+  OMEGA <- out[1:p,(p+2):(2*p+1)]
+  lambda <- out[1,2*p+2]
+  lambda.seq <- out[(p+1):(p+n.lambda), 1]
+  crit.seq <- out[(p+1):(p+n.lambda), 2]
+
+  return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
+              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq)))
+}
+
+pen.PI.nuclearAdapt <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV",
+                                n.cv = 100, w.gamma = 0){
+
+  p <- dim(X)[2]
+
+  # Translating crit from a string to an integer value
+  crit.vector <- c("CV", "AIC", "BIC", "HQ")
+  crit.int <- which(crit.vector ==  crit) - 1
+
+  # Calling cpp function
+  out <- penAdaptNuclearCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, w.gamma)
+
+  # Extracting results from the cpp output
+  PI <- out[1:p,1:p]
+  MU <- out[1:p,p+1]
+  OMEGA <- out[1:p,(p+2):(2*p+1)]
+  lambda <- out[1,2*p+2]
+  lambda.seq <- out[(p+1):(p+n.lambda), 1]
+  crit.seq <- out[(p+1):(p+n.lambda), 2]
+
+  return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
+              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq)))
+}
