@@ -28,7 +28,8 @@ arma::mat penAdaptNuclearLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_ols, 
     }
   }
 
-  mat Pi_restricted = V*diagmat(d_restricted)*diagmat(1/d)*V.t()*Pi_ols;
+  mat Pi_restricted =  Pi_ols * V * diagmat(1/d) * diagmat(d_restricted) * V.t();
+    //V*diagmat(d_restricted)*diagmat(1/d)*V.t()*Pi_ols;
 
   return Pi_restricted;
 }
@@ -74,17 +75,17 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   mat Zstd = (Z - ones<mat>(N,1)*meanZ)*diagmat(1/sdZ);
 
   // Calculate the OLS estimate and its SVD
-  mat Pi_ols = Ystd.t() * Zstd * (Zstd.t()*Zstd).i();
+  mat Pi_ols = (Zstd.t()*Zstd).i() * Zstd.t()*Ystd;
 
   mat U;
   vec d;
   mat V;
 
-  arma::svd(U, d, V, Zstd*Pi_ols.t());
+  arma::svd(U, d, V, Zstd*Pi_ols);
 
   // Calculate the sequence of lambdas
   double lambda_max = pow(max(d),w_gamma+1);
-  vec lambda_seq = linspace(lambda_max, lambda_min, n_lambda);
+  vec lambda_seq = logspace(log10(lambda_max), log10(lambda_min), n_lambda);
   vec crit_value = zeros<vec>(n_lambda);
 
   // Choose optimal lambda
@@ -127,12 +128,12 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
       for(int ii=0; ii<5; ii++){
         mat Ystd_cv = Ystd.rows(find(folds!=ii));
         mat Zstd_cv = Zstd.rows(find(folds!=ii));
-        mat Pi_ols_cv = Ystd_cv.t()*Zstd_cv*(Zstd_cv.t()*Zstd_cv).i();
+        mat Pi_ols_cv = (Zstd_cv.t()*Zstd_cv).i() * Zstd_cv.t()*Ystd_cv;
 
         mat U_cv;
         vec d_cv;
         mat V_cv;
-        arma::svd(U_cv, d_cv, V_cv, Zstd*Pi_ols_cv.t());
+        arma::svd(U_cv, d_cv, V_cv, Zstd*Pi_ols_cv);
 
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
@@ -151,8 +152,8 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   // Fit with an optimal lambda
   Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda_opt, U, d, V, w_gamma);
 
-  // Final unnormalization
-  Pi_restricted = Pi_restricted;
+  //Final unnormalization
+  Pi_restricted = Pi_restricted.t();
   for(int ir=0; ir<p; ir++){
     Pi_restricted.row(ir) = Pi_restricted.row(ir)*diagmat(sdY(ir)/sdZ);
   }

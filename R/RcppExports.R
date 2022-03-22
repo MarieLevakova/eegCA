@@ -77,8 +77,8 @@ accu2 <- function(obj) {
     .Call('_eegCA_accu2', PACKAGE = 'eegCA', obj)
 }
 
-penPiCpp <- function(X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv) {
-    .Call('_eegCA_penPiCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv)
+penPiCpp <- function(X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv, q) {
+    .Call('_eegCA_penPiCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv, q)
 }
 
 surr_fit_Rcpp <- function(Y, X, lambda, U0, V0, WU, WV, Xtran, control, n_cv) {

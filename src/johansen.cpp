@@ -62,6 +62,7 @@ arma::mat vecm(arma::mat X, int r, arma::mat A, arma::mat B, double dt, bool nor
   mat Ap = M_perp(A);
   mat Ab = M_bar(A);
   mat Rt0,Rt1,St00,St11,St01,St10,St00_1;
+  cx_mat N12;
 
   if(Ap.size() != 1){ // A.perp is not degenerate!
     Rt0 = R0-S00*Ap*inv(Ap.t()*S00*Ap)*Ap.t()*R0;
@@ -73,12 +74,14 @@ arma::mat vecm(arma::mat X, int r, arma::mat A, arma::mat B, double dt, bool nor
     St10 = S(Rt1,Rt0);
     St00_1 = inv(Ab.t()*S00*Ab);
 
+    N12 = powmat(B.t()*S11*B, -0.5);
     solveMat = inv(B.t()*St11*B)*B.t()*St10*Ab*St00_1*Ab.t()*St01*B;
     cholS = chol(B.t()*St11*B,"lower");
 
   } else{
      // Solve for the eigenvalues (and vectors)
-     solveMat = inv(B.t()*S11*B)*B.t()*S10*S00_1*S01*B;
+     N12 = powmat(B.t()*S11*B, -0.5);
+     solveMat = conv_to<mat>::from(N12)*B.t()*B.t()*S10*S00_1*S01*B*conv_to<mat>::from(N12);
      // cholS = chol(B.t()*S11*B,"lower");
   }
 
@@ -89,7 +92,8 @@ arma::mat vecm(arma::mat X, int r, arma::mat A, arma::mat B, double dt, bool nor
 
   // C++ function returns complex vectors/matrices, so extract real parts
   vec eigval = real(eigval_cx);
-  mat eigvec = real(eigvec_cx);
+  mat eigvec = conv_to<mat>::from(N12)*real(eigvec_cx);
+  // eigvec = inv(N12)*eigvec;
 
   // Sort by eigenvalues, descending (sort vectors first!)
   eigvec = eigvec.cols(sort_index(eigval,"descend"));

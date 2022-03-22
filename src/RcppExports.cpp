@@ -323,8 +323,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // penPiCpp
-arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r, int maxiter, int crit, double dt, bool w_auto, int n_cv);
-RcppExport SEXP _eegCA_penPiCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP rSEXP, SEXP maxiterSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP w_autoSEXP, SEXP n_cvSEXP) {
+arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r, int maxiter, int crit, double dt, bool w_auto, int n_cv, double q);
+RcppExport SEXP _eegCA_penPiCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP rSEXP, SEXP maxiterSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP w_autoSEXP, SEXP n_cvSEXP, SEXP qSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -337,7 +337,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
     Rcpp::traits::input_parameter< bool >::type w_auto(w_autoSEXP);
     Rcpp::traits::input_parameter< int >::type n_cv(n_cvSEXP);
-    rcpp_result_gen = Rcpp::wrap(penPiCpp(X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv));
+    Rcpp::traits::input_parameter< double >::type q(qSEXP);
+    rcpp_result_gen = Rcpp::wrap(penPiCpp(X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv, q));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -382,7 +383,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_eegCA_penNuclearCpp", (DL_FUNC) &_eegCA_penNuclearCpp, 9},
     {"_eegCA_penRankCpp", (DL_FUNC) &_eegCA_penRankCpp, 6},
     {"_eegCA_accu2", (DL_FUNC) &_eegCA_accu2, 1},
-    {"_eegCA_penPiCpp", (DL_FUNC) &_eegCA_penPiCpp, 9},
+    {"_eegCA_penPiCpp", (DL_FUNC) &_eegCA_penPiCpp, 10},
     {"_eegCA_surr_fit_Rcpp", (DL_FUNC) &_eegCA_surr_fit_Rcpp, 10},
     {NULL, NULL, 0}
 };

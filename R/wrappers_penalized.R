@@ -171,7 +171,7 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
 }
 
 pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
-                              dt = 1, crit = "CV", w.auto = TRUE, n.cv = 100){
+                              dt = 1, crit = "CV", w.auto = TRUE, n.cv = 100, q = 2){
 
   p <- dim(X)[2]
 
@@ -180,7 +180,7 @@ pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
   crit.int <- which(crit.vector ==  crit) - 1
 
   # Calling cpp function
-  out <- penPiCpp(X, n.lambda, lambda.min, r, maxiter, crit.int, dt, w.auto, n.cv)
+  out <- penPiCpp(X, n.lambda, lambda.min, r, maxiter, crit.int, dt, w.auto, n.cv, q)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]
@@ -438,22 +438,22 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 20
 
 
 # Unrestricted penalized estimation of Pi
-pen.qr <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
+pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
                                 lambda, n.lambda = 100, n.cv = 10, thresh = 1e-12,
                                 maxit = 1e6, dt = 1, psi = 2){
-  Y <- diff(yt)
+  Y <- diff(X)
   N <- dim(Y)[1]
   p <- dim(Y)[2]
-  Z <- yt[1:N,]
+  Z <- X[1:N,]
 
   # Standardize variables
   meanY <- apply(Y, 2, mean)
   sdY <- apply(Y, 2, sd)
-  Ystd <- (Y - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanY))) %*% diag(1/sdY)
+  Ystd <- (Y - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanY))) #%*% diag(1/sdY)
 
   meanZ <- apply(Z, 2, mean)
   sdZ <- apply(Z, 2, sd)
-  Zstd <- (Z - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanZ))) %*% diag(1/sdZ)
+  Zstd <- (Z - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanZ))) #%*% diag(1/sdZ)
 
   # Preliminary OLS estimate
   Pi0 <- PI.OLS(Ystd, Zstd, dt = dt, intercept = F)$PI
@@ -530,7 +530,6 @@ pen.qr <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   }
 
   # Fit the final model
-
   LASSOfinal <- glmnet(y = Ystd, x = ZS,
                        intercept = F,
                        penalty.factor = penalty.factor^psi,
@@ -540,9 +539,9 @@ pen.qr <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
     R.Sparse[,i] <- as.matrix(coef(LASSOfinal, s = lambda.opt)[[i]])[-1]
   }
   PI.Sparse <- t(Smat %*% R.Sparse)
-  for(i in 1:p){
-    PI.Sparse[,i] <- PI.Sparse[,i] %*% diag(sdY[i]/sdZ)
-  }
+  # for(i in 1:p){
+  #   PI.Sparse[,i] <- PI.Sparse[,i] %*% diag(sdY[i]/sdZ)
+  # }
 
   mu.hat <- meanY - PI.Sparse %*% as.matrix(meanZ, ncol =1)
   res <- Y - matrix(1, nrow = N, ncol = 1) %*% t(mu.hat) - Z %*% t(PI.Sparse)
@@ -569,9 +568,11 @@ pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.
   lambda <- out[1,2*p+2]
   lambda.seq <- out[(p+1):(p+n.lambda), 1]
   crit.seq <- out[(p+1):(p+n.lambda), 2]
+  PI.seq <- out[(p+n.lambda):(p+1), 3:(p^2+2)] # reverse the order
 
   return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
-              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq)))
+              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq),
+              PI.seq = PI.seq))
 }
 
 pen.PI.nuclearAdapt <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV",
