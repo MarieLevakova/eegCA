@@ -436,6 +436,110 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 20
   return(list(ALPHA = ALPHA.Sparse/dt, BETA = BETA, PI = PI/dt, OMEGA = OMEGA/dt, MU = MU/dt))
 }
 
+# Row sparse penalization of alpha
+pen.alpha.rowSparse <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
+                   lambda, n.lambda = 100, n.cv = 10, thresh = 1e-12,
+                   maxit = 1e6, dt = 1, psi = 2){
+  Y <- diff(X)
+  N <- dim(Y)[1]
+  p <- dim(Y)[2]
+  Z <- X[1:N,]
+
+  # Standardize variables
+  meanY <- apply(Y, 2, mean)
+  sdY <- apply(Y, 2, sd)
+  Ystd <- (Y - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanY))) #%*% diag(1/sdY)
+
+  meanZ <- apply(Z, 2, mean)
+  sdZ <- apply(Z, 2, sd)
+  Zstd <- (Z - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanZ))) #%*% diag(1/sdZ)
+
+  # Get the cointegration matrix by Johansen procedure
+  fit.johansen <- johansenAggregated(Ystd, Zstd, r = p, dt = dt, intercept = F, normalize = F)$PI
+
+  # Construct a new predictor matrix
+  beta.full <- fit.johansen$beta
+  Z.new <- Zstd %*% beta.full
+
+  alpha.Sparse <- matrix(NA, nrow = p, ncol = p)
+
+  # Determine the lambda sequence
+  determine_lambdasequence <- glmnet(y = Ystd, x = Z.new,
+                                     intercept = F,
+                                     family = "mgaussian")
+
+  lambda.seq <- determine_lambdasequence$lambda
+  n.lambda <- length(lambda.seq)
+
+  if(crit=="fixed"){
+    lambda.opt[i.r] <- lambda
+  } else {
+
+
+    if(crit!="CV"){
+      alpha.select <- array(0, dim = c(p, p, n.lambda))
+      for(i in 1:p){
+        alpha.select[,i,] <- as.matrix(determine_lambdasequence$beta[[i]])
+      }
+
+      aic <- rep(NA, n.lambda)
+      bic <- rep(NA, n.lambda)
+      hq <- rep(NA, n.lambda)
+      for(ii in 1:n.lambda){
+        N <- dim(Ystd)[1]
+        k <- sum((Smatalpha.select[,,ii] %*% t(beta.full))!=0)
+        res <- Ystd - Z.new %*% alpha.select[,,ii]
+        Omega.select <- (t(res) %*% res)/N
+        Omega.inv <- solve(Omega.select)
+        aic[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + 2*k +
+          sum(diag(res %*% Omega.inv %*% t(res)))
+        bic[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + k*log(N*p) +
+          sum(diag(res %*% Omega.inv %*% t(res)))
+        hq[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + 2*k*log(log(N*p)) +
+          sum(diag(res %*% Omega.inv %*% t(res)))
+      }
+      if(crit=="AIC"){
+        lambda.opt <- lambda.seq[which.min(aic)]
+      }
+      if(crit=="BIC"){
+        lambda.opt <- lambda.seq[which.min(bic)]
+      }
+      if(crit=="HQ"){
+        lambda.opt <- lambda.seq[which.min(hq)]
+      }
+    }
+    if(crit=="CV"){
+      cv <- rep(0, n.lambda)
+      for(i.cv in 1:n.cv){
+        determine_lambda <- cv.glmnet(y = Ystd, x = Z.new,
+                                      intercept = F,
+                                      family = "mgaussian")
+        cv <- cv + 1/(n.cv*p)*determine_lambda$cvm
+      }
+      lambda.opt <- lambda.seq[which.min(cv)]
+    }
+  }
+
+  # Fit the final model
+  LASSOfinal <- glmnet(y = Ystd, x = Z.new,
+                       intercept = F,
+                       family = "mgaussian")
+  alpha.Sparse <- matrix(0, nrow = p, ncol = p)
+  for(i in 1:p){
+    alpha.Sparse[,i] <- as.matrix(coef(LASSOfinal, s = lambda.opt)[[i]])[-1]
+  }
+  PI.Sparse <- alpha.Sparse %*% t(beta.full)
+  # for(i in 1:p){
+  #   PI.Sparse[,i] <- PI.Sparse[,i] %*% diag(sdY[i]/sdZ)
+  # }
+
+  mu.hat <- meanY - PI.Sparse %*% as.matrix(meanZ, ncol =1)
+  res <- Y - matrix(1, nrow = N, ncol = 1) %*% t(mu.hat) - Z %*% t(PI.Sparse)
+  Omega.hat <- (t(res) %*% res)/N
+
+  return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt))
+}
+
 
 # Unrestricted penalized estimation of Pi
 pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
