@@ -5,7 +5,7 @@
 #####################################################
 
 rank.johansen <- function(X, conf.level = 0.05, type = c("trace", "max")){
-  # A function estimating the cointegration rank by Johansen procedure,
+  # A function for estimating the cointegration rank by Johansen procedure,
   # namely the trace and the maximum eigenvalue test of the rank
   # Input: X - matrix with signals in columns
   #        conf.level - confidence level for the tests
@@ -31,7 +31,7 @@ rank.johansen <- function(X, conf.level = 0.05, type = c("trace", "max")){
                      277.39, 11.65, 23.52, 37.22, 55.43, 78.87, 104.2, 136.06,
                      168.92, 204.79, 246.27, 292.65), c(11, 3, 2))
 
-    lambdas <- vecmEigen(X)
+    lambdas <- vecm(X, r = 1, diag(P), diag(P), dt = 1)[p+5,]
     lrts1 <- -N*rev(cumsum(log(1-rev(lambdas))))
     lrts2 <- -N*log(1-lambdas)
 
@@ -41,7 +41,8 @@ rank.johansen <- function(X, conf.level = 0.05, type = c("trace", "max")){
     r["max"] <- which(lrts2 <= cvals[0:P, conf.level == alpha.levels, 1])[1] - 1
     return(list(r = r[type],
          lambdas = lambdas,
-         lrts = data.frame(trace = lrts1, max = lrts2, row.names = paste("r =", 0:(P-1)))))
+         lrts = data.frame(trace = lrts1, max = lrts2,
+                           row.names = paste("r =", 0:(P-1)))))
   }
 }
 
