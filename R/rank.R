@@ -37,8 +37,8 @@ rank.johansen <- function(X, conf.level = 0.05, type = c("trace", "max")){
 
     r <- c(NA, NA)
     names(r) <- c("trace", "max")
-    r["trace"] <- which(lrts1 <= cvals[0:P, conf.level == alpha.levels, 2])[1] - 1
-    r["max"] <- which(lrts2 <= cvals[0:P, conf.level == alpha.levels, 1])[1] - 1
+    r["trace"] <- which(c(lrts1, 0) <= c(cvals[0:P, conf.level == alpha.levels, 2], 1))[1] - 1
+    r["max"] <- which(c(lrts2, 0) <= c(cvals[0:P, conf.level == alpha.levels, 1], 1))[1] - 1
     return(list(r = r[type],
          lambdas = lambdas,
          lrts = data.frame(trace = lrts1, max = lrts2,
