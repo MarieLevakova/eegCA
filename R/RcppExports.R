@@ -65,8 +65,8 @@ penAdaptNuclearCpp <- function(X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma)
     .Call('_eegCA_penAdaptNuclearCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma)
 }
 
-penNuclearCpp <- function(X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh) {
-    .Call('_eegCA_penNuclearCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh)
+penNuclearCpp <- function(X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, mu) {
+    .Call('_eegCA_penNuclearCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, mu)
 }
 
 penRankCpp <- function(X, n_lambda, lambda_min, crit, dt, n_cv) {
@@ -77,8 +77,8 @@ accu2 <- function(obj) {
     .Call('_eegCA_accu2', PACKAGE = 'eegCA', obj)
 }
 
-penPiCpp <- function(X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv, q) {
-    .Call('_eegCA_penPiCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv, q)
+penPiCpp <- function(X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv, q, weights) {
+    .Call('_eegCA_penPiCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, r, maxiter, crit, dt, w_auto, n_cv, q, weights)
 }
 
 surr_fit_Rcpp <- function(Y, X, lambda, U0, V0, WU, WV, Xtran, control, n_cv) {

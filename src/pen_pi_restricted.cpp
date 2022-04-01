@@ -26,7 +26,7 @@ double accu2(arma::mat& obj){
 }
 
 arma::mat penPiLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init, double lambda,
-                    int r, int maxiter, bool w_auto, double q){
+                    int r, int maxiter, bool w_auto, double q, arma::mat weights){
 
   int N = Ystd.n_rows;
   int p = Ystd.n_cols;
@@ -43,11 +43,11 @@ arma::mat penPiLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init, double la
 
     for(int iii = 0; iii < p; iii++){
       for(int jjj = 0; jjj < p; jjj++){
-        if (PI_free(iii,jjj) > w(ii-1)*lambda) {
-          PI_free(iii,jjj) = PI_free(iii,jjj) - w(ii-1)*lambda;
+        if (PI_free(iii,jjj) > w(ii-1)*lambda*weights(iii,jjj)) {
+          PI_free(iii,jjj) = PI_free(iii,jjj) - w(ii-1)*lambda*weights(iii,jjj);
         }
-        else if (PI_free(iii,jjj) < -w(ii-1)*lambda) {
-          PI_free(iii,jjj) = PI_free(iii,jjj) + w(ii-1)*lambda;
+        else if (PI_free(iii,jjj) < -w(ii-1)*lambda*weights(iii,jjj)) {
+          PI_free(iii,jjj) = PI_free(iii,jjj) + w(ii-1)*lambda*weights(iii,jjj);
         }
         else {
           PI_free(iii,jjj) = 0;
@@ -146,6 +146,7 @@ arma::mat penPiLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init, double la
 //   dt - timestep
 //   w_auto - should weights be chosen by the optimizing procedure, or a fixed sequence
 //   n_cv - number of repetitions of the crossvalidation procedure
+//   weights - pxp matrix of weights for adaptive lasso
 // OUTPUT:
 //   mat_output - a matrix containing:
 //                            Pi, mu, Omega, chosen lambda, iterations of Pi,
@@ -157,7 +158,8 @@ arma::mat penPiLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init, double la
 // [[Rcpp::export]]
 
 arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
-                   int maxiter, int crit, double dt, bool w_auto, int n_cv, double q){
+                   int maxiter, int crit, double dt, bool w_auto, int n_cv,
+                   double q, arma::mat weights){
 
   int N = X.n_rows-1;   // Number of observations
   int p = X.n_cols;     // Dimension of the system
@@ -193,7 +195,8 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
     for(int i=0; i<n_lambda; i++){
       lambda = lambda_seq(i);
 
-      mat pen_out = penPiLoop(Ystd, Zstd, Pi_init, lambda, r, maxiter, w_auto, q);
+      mat pen_out = penPiLoop(Ystd, Zstd, Pi_init, lambda, r, maxiter, w_auto,
+                              q, weights);
       Pi_restricted = pen_out(span(0, p-1), span(0, p-1));
       Pi_init = Pi_restricted;
 
@@ -229,7 +232,8 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
         Pi_init = zeros<mat>(p,p); //(Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv;
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
-          mat pen_out = penPiLoop(Ystd_cv, Zstd_cv, Pi_init, lambda, r, maxiter, w_auto, q);
+          mat pen_out = penPiLoop(Ystd_cv, Zstd_cv, Pi_init, lambda, r, maxiter,
+                                  w_auto, q, weights);
           Pi_restricted = pen_out(span(0,p-1), span(0,p-1));
           Pi_init = Pi_restricted;
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
@@ -254,7 +258,8 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
   for(int i=0; i<n_lambda; i++){
     lambda = lambda_seq(i);
 
-    mat pen_out = penPiLoop(Ystd, Zstd, Pi_init, lambda, r, maxiter, w_auto, q);
+    mat pen_out = penPiLoop(Ystd, Zstd, Pi_init, lambda, r, maxiter, w_auto, q,
+                            weights);
     Pi_restricted = pen_out(span(0, p-1), span(0, p-1));
     Pi_init = Pi_restricted;
     Pi_lambda.row(n_lambda-i-1) = reshape(Pi_restricted, 1, p*p);

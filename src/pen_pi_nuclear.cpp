@@ -12,10 +12,14 @@ using namespace arma;
 using namespace std;
 
 arma::mat penNuclearLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init,
-                         double lambda, int miniter, int maxiter, double thresh){
+                         double lambda, int miniter, int maxiter, double thresh,
+                         double mu){
 
   int N = Ystd.n_rows;
   int p = Ystd.n_cols;
+
+  Ystd = join_cols(Ystd, zeros<mat>(p,p));
+  Zstd = join_cols(Zstd, sqrt(mu)*eye<mat>(p,p));
 
   vec t_k = zeros<vec>(maxiter);
   vec r_k = zeros<vec>(maxiter);
@@ -100,7 +104,8 @@ arma::mat penNuclearLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init,
 // [[Rcpp::export]]
 
 arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
-                   int miniter, int maxiter, int crit, double dt, int n_cv, double thresh){
+                   int miniter, int maxiter, int crit, double dt, int n_cv,
+                   double thresh, double mu){
 
   int N = X.n_rows-1;   // Number of observations
   int p = X.n_cols;     // Dimension of the system
@@ -137,7 +142,8 @@ arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
     for(int i=0; i<n_lambda; i++){
       lambda = lambda_seq(i);
 
-      pen_out = penNuclearLoop(Ystd, Zstd, Pi_init, lambda, miniter, maxiter, thresh);
+      pen_out = penNuclearLoop(Ystd, Zstd, Pi_init, lambda, miniter, maxiter,
+                               thresh, mu);
       Pi_restricted = pen_out(span(0, p-1), span(0, p-1));
       Pi_init = Pi_restricted;
 
@@ -173,7 +179,8 @@ arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
         Pi_init = zeros<mat>(p,p); // (Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv;
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
-          pen_out = penNuclearLoop(Ystd_cv, Zstd_cv, Pi_init, lambda, miniter, maxiter, thresh);
+          pen_out = penNuclearLoop(Ystd_cv, Zstd_cv, Pi_init, lambda,
+                                   miniter, maxiter, thresh, mu);
           Pi_restricted = pen_out(span(0,p-1), span(0,p-1));
           Pi_init = Pi_restricted;
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted.t();
@@ -197,7 +204,8 @@ arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   for(int i=0; i<n_lambda; i++){
     lambda = lambda_seq(i);
 
-    pen_out = penNuclearLoop(Ystd, Zstd, Pi_init, lambda, miniter, maxiter, thresh);
+    pen_out = penNuclearLoop(Ystd, Zstd, Pi_init, lambda, miniter, maxiter,
+                             thresh, mu);
     Pi_restricted = pen_out(span(0, p-1), span(0, p-1));
     Pi_init = Pi_restricted;
     Pi_lambda.row(n_lambda-i-1) = reshape(Pi_restricted, 1, p*p);
