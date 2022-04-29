@@ -43,7 +43,8 @@ johansen <- function(X = NULL, r = 1, A = NULL, H = NULL, dt = 0.1, normalize = 
   if(r==0){
     a.hat = b.hat = rep(0, p)
   }
-  return(list(N=N, p=p, r=r ,alpha = a.hat, beta = b.hat, Psi=P.hat, Omega = O.hat, test=test, lambda=eigs, A=A, H=H, df=df, dt=dt, res=res, data=X))
+  return(list(N=N, p=p, r=r ,alpha = a.hat, beta = b.hat, Psi=P.hat, Omega = O.hat,
+              test=test, lambda=eigs, A=A, H=H, df=df, dt=dt, res=res, data=X))
 }
 
 johansenAggregated <- function(Y = NULL, Z = NULL, r = 1, A = NULL, H = NULL,
@@ -75,7 +76,9 @@ johansenAggregated <- function(Y = NULL, Z = NULL, r = 1, A = NULL, H = NULL,
   eigs  = out[(2*r+2+p+1),]
   res   = out[(2*r+2+p+2):(2*r+2+p+N+1),]
 
-  res0  = Y - matrix(P.hat, nrow = N, ncol = p, byrow = T)*dt
+  meanY <- apply(Y, 2, mean)
+
+  res0  = Y - matrix(meanY, nrow = N, ncol = p, byrow = T)
   R2    = 1 - sum(res^2)/sum(res0^2)
 
   names(P.hat)    = paste0("x",1:p)
