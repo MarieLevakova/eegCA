@@ -191,7 +191,7 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
 
 pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
                               dt = 1, crit = "CV", w.auto = TRUE, n.cv = 100, q = 2,
-                              weights = matrix(1, nrow = ncol(X), ncol = nrow(X))){
+                              weights = matrix(1, nrow = ncol(X), ncol = ncol(X))){
 
   p <- dim(X)[2]
 
@@ -444,7 +444,7 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
         ALPHA.Sparse[i.r,] <- matrix(coef(LASSOfinal, s = lambda.final), nrow = 1)[-1]
       }
     } else {
-
+      alpha.opt <- lambda.final <- rep(NA, p)
       for(i.r in 1:p){
         for(a in 1:length(alpha)){
           alpha.i <- alpha[a]
@@ -466,14 +466,14 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
           lambda.opt[a] <- determine_lambda$lambda[which.min(cv)]
           crit.opt[a] <- min(cv)
         }
-        alpha.opt <- alpha[which.min(crit.opt)]
-        lambda.final <- lambda.opt[which.min(crit.opt)]
+        alpha.opt[i.r] <- alpha[which.min(crit.opt)]
+        lambda.final[i.r] <- lambda.opt[which.min(crit.opt)]
 
         # Fit the final model
         LASSOfinal <- glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
                              nlambda = n.lambda, family = "gaussian",
-                             alpha = alpha.opt)
-        ALPHA.Sparse[i.r,] <- matrix(coef(LASSOfinal, s = lambda.final), nrow = 1)[-1]
+                             alpha = alpha.opt[i.r])
+        ALPHA.Sparse[i.r,] <- matrix(coef(LASSOfinal, s = lambda.final[i.r]), nrow = 1)[-1]
       }
     }
   }
@@ -484,7 +484,158 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
   OMEGA <- (t(res) %*% res)/N
 
   return(list(ALPHA = ALPHA.Sparse/dt, BETA = BETA, PI = PI/dt, OMEGA = OMEGA/dt,
-              MU = MU/dt))
+              MU = MU/dt), lambda.lasso = lambda.final, lambda.ridge = alpha.opt)
+}
+
+# Penalty on alpha in EEG data (linearly dependent channels)
+pen.alpha.eeg <- function(Y, Z, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10,
+                      alpha = 1){
+
+  ## INPUT
+  # Y: differenced time series
+  # Z: lagged time series
+  # r: cointegration rank
+  # max.iter: maximum number of iterations
+  # conv: convergence parameter
+  # nlambda: number of penalty values to check
+  # glmnetthresh: tolerance parameter glmnet function
+  # dt: timestep
+  # equal.penalty: logical value, whether the penalty should be constant over the r cointegration vectors, or not
+
+  ## OUTPUT
+  # BETA: estimate of cointegrating vectors
+  # ALPHA: estimate of adjustment coefficients
+  # OMEGA: estimate of covariance matrix
+  # PI: estimate of Pi
+  # MU: estimate of the intercept
+  # it: number of iterations
+  # value.obj: value of the objective function at each iteration
+  # Pi.it: estimate of Pi at each iteration
+
+  ## START CODE
+  N <- dim(Y)[1]
+  p <- dim(Y)[2]
+
+  # Centering variables, to remove the effect of intercept
+  Ystd <- Y
+  meanY <- apply(Y, 2, mean)
+  sdY <- apply(Y, 2, sd)
+  Ystd <- (Y - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanY)))
+
+  meanZ <- apply(Z, 2, mean)
+  sdZ <- apply(Z, 2, sd)
+  Zstd <- (Z - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanZ)))
+
+  Ystd.p <- Y[,-p]
+  Zstd.p <- Z[,-p]
+
+  # Fit the usual cointegration model
+  fit0 <- johansenAggregated(Y = Ystd.p, Z = Zstd.p, r = r, dt = dt, intercept = F,
+                             normalize = F)
+
+  # Extract beta and create new set of predictors
+  BETA.p <- fit0$beta
+  BETA.p.mean <- (p-1)/p*apply(BETA.p, 2, mean)
+  BETA.full <- rbind(BETA.p, -BETA.p.mean) -
+    matrix(c(rep(1, p-1), 0), ncol = 1) %*% t(BETA.p.mean)
+  Z.r <- matrix(Zstd %*% BETA.full, nrow = N, ncol = r)
+
+  # Estimate alpha with LASSO penalty
+
+  ALPHA.Sparse <- matrix(NA, nrow = p, ncol = r)
+
+  if(r == 1){
+    ALPHA.Sparse  <- matrix(coef(lm(Ystd ~ Z.r - 1)), ncol = 1)
+  } else {
+
+    if(equal.penalty){
+      lambda.opt <- crit.opt <- rep(NA, length(alpha))
+      for(a in 1:length(alpha)){
+        alpha.i <- alpha[a]
+        # Determine the lambda sequence
+        lambda.max <- 0
+        lambda.min <- NA
+        for(i.r in 1:p){
+          determine_lambdasequence <- glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
+                                             family = "gaussian",
+                                             alpha = alpha.i)
+          lambda.max <- max(c(lambda.max, determine_lambdasequence$lambda))
+          lambda.min <- min(c(lambda.min, determine_lambdasequence$lambda), na.rm = T)
+        }
+
+        lambda.seq <- exp(seq(log(lambda.max), log(lambda.min), length = n.lambda))
+        cv <- rep(0, n.lambda)
+        for(i.cv in 1:n.cv){
+          for(i.r in 1:p){
+            determine_lambda <- cv.glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
+                                          family = "gaussian", lambda = lambda.seq,
+                                          alpha = alpha.i)
+            cv <- cv + 1/(n.cv*r)*determine_lambda$cvm
+          }
+        }
+        lambda.opt[a] <- lambda.seq[which.min(cv)]
+        crit.opt[a] <- min(cv)
+      }
+
+      # Fit the final model
+      alpha.opt <- alpha[which.min(crit.opt)]
+      lambda.final <- lambda.opt[which.min(crit.opt)]
+
+      for(i.r in 1:p){
+        LASSOfinal <- glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
+                             lambda = lambda.seq, family = "gaussian",
+                             alpha = alpha.opt)
+        ALPHA.Sparse[i.r,] <- matrix(coef(LASSOfinal, s = lambda.final), nrow = 1)[-1]
+      }
+    } else {
+
+      alpha.opt <- lambda.final <- rep(NA,p)
+      for(i.r in 1:p){
+        for(a in 1:length(alpha)){
+          alpha.i <- alpha[a]
+          lambda.opt <- crit.opt <- rep(NA, length(alpha))
+
+          determine_lambdasequence <- glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
+                                             family = "gaussian",
+                                             alpha = alpha.i)
+          lambda.max <- max(determine_lambdasequence$lambda)
+          lambda.min <- min(determine_lambdasequence$lambda)
+
+          lambda.seq <- exp(seq(log(lambda.max), log(lambda.min), length = n.lambda))
+
+          cv <- rep(0, n.lambda)
+          for(i.cv in 1:n.cv){
+            determine_lambda <- cv.glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
+                                          family = "gaussian", lambda = lambda.seq,
+                                          alpha = alpha.i)
+            cv <- cv + 1/(n.cv*r)*determine_lambda$cvm
+          }
+          lambda.opt[a] <- determine_lambda$lambda[which.min(cv)]
+          crit.opt[a] <- min(cv)
+        }
+        alpha.opt[i.r] <- alpha[which.min(crit.opt)]
+        lambda.final[i.r] <- lambda.opt[which.min(crit.opt)]
+
+        # Fit the final model
+        LASSOfinal <- glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
+                             nlambda = n.lambda, family = "gaussian",
+                             alpha = alpha.opt[i.r])
+        ALPHA.Sparse[i.r,] <- matrix(coef(LASSOfinal, s = lambda.final[i.r]), nrow = 1)[-1]
+      }
+    }
+  }
+
+  PI <- ALPHA.Sparse %*% t(BETA.full)
+  MU <- meanY - PI %*% as.matrix(meanZ, ncol =1)
+  res <- Y - matrix(1, nrow = N, ncol = 1) %*% t(MU) - Z %*% t(PI)
+  OMEGA <- (t(res) %*% res)/N
+
+  meanY <- apply(Y, 2, mean)
+  res0  = Y - matrix(meanY, nrow = N, ncol = p, byrow = T)
+  R2    = 1 - sum(res^2)/sum(res0^2)
+
+  return(list(ALPHA = ALPHA.Sparse/dt, BETA = BETA.full, PI = PI/dt, OMEGA = OMEGA/dt,
+              MU = MU/dt, R2 = R2, lambda.lasso = lambda.final, lambda.ridge = alpha.opt))
 }
 
 # Row sparse penalization of alpha
@@ -705,7 +856,7 @@ pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt))
 }
 
-pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.cv = 100){
+pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.cv = 100, mu = 0.01){
 
   p <- dim(X)[2]
 
@@ -714,7 +865,7 @@ pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.
   crit.int <- which(crit.vector ==  crit) - 1
 
   # Calling cpp function
-  out <- penRankCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv)
+  out <- penRankCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, mu)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]
@@ -731,7 +882,7 @@ pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.
 }
 
 pen.PI.nuclearAdapt <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV",
-                                n.cv = 100, w.gamma = 0){
+                                n.cv = 100, w.gamma = 0, mu = 0.01){
 
   p <- dim(X)[2]
 
@@ -740,7 +891,7 @@ pen.PI.nuclearAdapt <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = 
   crit.int <- which(crit.vector ==  crit) - 1
 
   # Calling cpp function
-  out <- penAdaptNuclearCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, w.gamma)
+  out <- penAdaptNuclearCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, w.gamma, mu)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]

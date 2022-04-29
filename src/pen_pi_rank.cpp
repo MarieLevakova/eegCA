@@ -13,11 +13,15 @@ using namespace std;
 // [[Rcpp::depends(RcppArmadillo)]]
 
 arma::mat penRankLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_ols, double lambda,
-                      arma::mat V, arma::vec d){
+                      arma::mat V, arma::vec d,
+                      double mu){
 
   int N = Ystd.n_rows;
   int p = Ystd.n_cols;
   int r = d.n_elem;
+
+  Ystd = join_cols(Ystd, zeros<mat>(p,p));
+  Zstd = join_cols(Zstd, sqrt(mu)*eye<mat>(p,p));
 
   // mat W = Pi_ols*V;
   // mat G = V.t();
@@ -69,7 +73,7 @@ arma::mat penRankLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_ols, double l
 // [[Rcpp::export]]
 
 arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min,
-                     int crit, double dt, int n_cv){
+                     int crit, double dt, int n_cv, double mu){
 
   int N = X.n_rows-1;   // Number of observations
   int p = X.n_cols;     // Dimension of the system
@@ -123,7 +127,7 @@ arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min,
   for(int i=0; i<n_lambda; i++){
     lambda = lambda_seq(i);
 
-    Pi_restricted = penRankLoop(Ystd, Zstd, Pi_ols, lambda, conv_to<mat>::from(V_svd), d);
+    Pi_restricted = penRankLoop(Ystd, Zstd, Pi_ols, lambda, conv_to<mat>::from(V_svd), d, mu);
 
     Pi_iter.row(i) = reshape(Pi_restricted, 1, p*p);
 
@@ -178,7 +182,7 @@ arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min,
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
 
-          mat Pi_restricted = penRankLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda, conv_to<mat>::from(V_cv), d_cv);
+          mat Pi_restricted = penRankLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda, conv_to<mat>::from(V_cv), d_cv, mu);
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
           cv(i) = cv(i) + trace(res*res.t())/(N*p*n_cv);
         }
@@ -191,7 +195,7 @@ arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min,
   lambda_opt = lambda_seq(crit_value.index_min());
 
   // Fit with an optimal lambda
-  Pi_restricted = penRankLoop(Ystd, Zstd, Pi_ols, lambda, conv_to<mat>::from(V_svd), d);
+  Pi_restricted = penRankLoop(Ystd, Zstd, Pi_ols, lambda, conv_to<mat>::from(V_svd), d, mu);
 
   // Final unnormalization
   Pi_restricted = Pi_restricted.t();

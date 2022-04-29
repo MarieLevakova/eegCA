@@ -37,15 +37,15 @@ arma::mat penAdaptNuclearLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_ols, 
 // Function to estimate Pi, lambda chosen by cross-validation method
 // based on average error of 1-step forecast
 // INPUT:
-  //   X - multivariate time series
+//   X - multivariate time series
 //   nlambda - length of lambda sequence
 //   lambda_min - minimum lambda in the sequence
 //   crit - numerical value representing the method to choose lambda
 //   dt - timestep
 //   n_cv - number of repetitions of the crossvalidation procedure
 // OUTPUT:
-  //   mat_output - a matrix containing:
-  //                            Pi, mu, Omega, chosen lambda,
+//   mat_output - a matrix containing:
+//                            Pi, mu, Omega, chosen lambda,
 //                            full sequence of lambdas, value of the criteria to choose lambda
 
 // [[Rcpp::depends(RcppArmadillo)]]
@@ -53,7 +53,7 @@ arma::mat penAdaptNuclearLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_ols, 
 // [[Rcpp::export]]
 
 arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
-                     int crit, double dt, int n_cv, double w_gamma){
+                     int crit, double dt, int n_cv, double w_gamma, double mu){
 
   int N = X.n_rows-1;   // Number of observations
   int p = X.n_cols;     // Dimension of the system
@@ -97,7 +97,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
     for(int i=0; i<n_lambda; i++){
       lambda = lambda_seq(i);
 
-      Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda, U, d, V, w_gamma);
+      Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda, U, d, V, w_gamma)/(1+mu);
 
       int k = accu(conv_to<imat>::from(Pi_restricted!=zeros<mat>(p,p)));
       mat res = Ystd - Zstd * Pi_restricted;
@@ -138,7 +138,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
 
-          mat Pi_restricted = penAdaptNuclearLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda, U_cv, d_cv, V_cv, w_gamma);
+          mat Pi_restricted = penAdaptNuclearLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda, U_cv, d_cv, V_cv, w_gamma)/(1+mu/2);
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
           cv(i) = cv(i) + trace(res*res.t())/(N*p*n_cv);
         }
@@ -150,7 +150,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   }
 
   // Fit with an optimal lambda
-  Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda_opt, U, d, V, w_gamma);
+  Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda_opt, U, d, V, w_gamma)/(1+mu/2);
 
   //Final unnormalization
   Pi_restricted = Pi_restricted.t();
