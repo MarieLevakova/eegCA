@@ -53,7 +53,7 @@ arma::mat penAdaptNuclearLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_ols, 
 // [[Rcpp::export]]
 
 arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
-                     int crit, double dt, int n_cv, double w_gamma, double mu){
+                     int crit, double dt, int n_cv, double w_gamma, double alpha){
 
   int N = X.n_rows-1;   // Number of observations
   int p = X.n_cols;     // Dimension of the system
@@ -84,7 +84,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   arma::svd(U, d, V, Zstd*Pi_ols);
 
   // Calculate the sequence of lambdas
-  double lambda_max = pow(max(d),w_gamma+1);
+  double lambda_max = pow(max(d),w_gamma+1)/alpha;
   vec lambda_seq = logspace(log10(lambda_max), log10(lambda_min), n_lambda);
   vec crit_value = zeros<vec>(n_lambda);
 
@@ -97,7 +97,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
     for(int i=0; i<n_lambda; i++){
       lambda = lambda_seq(i);
 
-      Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda, U, d, V, w_gamma)/(1+mu);
+      Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda*alpha, U, d, V, w_gamma)/(1+lambda*(1-alpha));
 
       int k = accu(conv_to<imat>::from(Pi_restricted!=zeros<mat>(p,p)));
       mat res = Ystd - Zstd * Pi_restricted;
@@ -138,7 +138,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
 
-          mat Pi_restricted = penAdaptNuclearLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda, U_cv, d_cv, V_cv, w_gamma)/(1+mu/2);
+          mat Pi_restricted = penAdaptNuclearLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda*alpha, U_cv, d_cv, V_cv, w_gamma)/(1+lambda*(1-alpha));
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
           cv(i) = cv(i) + trace(res*res.t())/(N*p*n_cv);
         }
@@ -150,7 +150,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   }
 
   // Fit with an optimal lambda
-  Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda_opt, U, d, V, w_gamma)/(1+mu/2);
+  Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda_opt*alpha, U, d, V, w_gamma)/(1+lambda*(1-alpha));
 
   //Final unnormalization
   Pi_restricted = Pi_restricted.t();

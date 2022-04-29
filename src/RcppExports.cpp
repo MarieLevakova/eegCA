@@ -260,8 +260,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // penAdaptNuclearCpp
-arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min, int crit, double dt, int n_cv, double w_gamma, double mu);
-RcppExport SEXP _eegCA_penAdaptNuclearCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP, SEXP w_gammaSEXP, SEXP muSEXP) {
+arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min, int crit, double dt, int n_cv, double w_gamma, double alpha);
+RcppExport SEXP _eegCA_penAdaptNuclearCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP, SEXP w_gammaSEXP, SEXP alphaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -272,14 +272,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
     Rcpp::traits::input_parameter< int >::type n_cv(n_cvSEXP);
     Rcpp::traits::input_parameter< double >::type w_gamma(w_gammaSEXP);
-    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
-    rcpp_result_gen = Rcpp::wrap(penAdaptNuclearCpp(X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma, mu));
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    rcpp_result_gen = Rcpp::wrap(penAdaptNuclearCpp(X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma, alpha));
     return rcpp_result_gen;
 END_RCPP
 }
 // penNuclearCpp
-arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min, int miniter, int maxiter, int crit, double dt, int n_cv, double thresh, double mu);
-RcppExport SEXP _eegCA_penNuclearCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP miniterSEXP, SEXP maxiterSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP, SEXP threshSEXP, SEXP muSEXP) {
+arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min, int miniter, int maxiter, int crit, double dt, int n_cv, double thresh, double alpha);
+RcppExport SEXP _eegCA_penNuclearCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP miniterSEXP, SEXP maxiterSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP, SEXP threshSEXP, SEXP alphaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -292,14 +292,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
     Rcpp::traits::input_parameter< int >::type n_cv(n_cvSEXP);
     Rcpp::traits::input_parameter< double >::type thresh(threshSEXP);
-    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
-    rcpp_result_gen = Rcpp::wrap(penNuclearCpp(X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, mu));
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    rcpp_result_gen = Rcpp::wrap(penNuclearCpp(X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, alpha));
     return rcpp_result_gen;
 END_RCPP
 }
 // penRankCpp
-arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min, int crit, double dt, int n_cv, double mu);
-RcppExport SEXP _eegCA_penRankCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP, SEXP muSEXP) {
+arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min, int crit, double dt, int n_cv, double alpha);
+RcppExport SEXP _eegCA_penRankCpp(SEXP XSEXP, SEXP n_lambdaSEXP, SEXP lambda_minSEXP, SEXP critSEXP, SEXP dtSEXP, SEXP n_cvSEXP, SEXP alphaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -309,8 +309,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type crit(critSEXP);
     Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
     Rcpp::traits::input_parameter< int >::type n_cv(n_cvSEXP);
-    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
-    rcpp_result_gen = Rcpp::wrap(penRankCpp(X, n_lambda, lambda_min, crit, dt, n_cv, mu));
+    Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
+    rcpp_result_gen = Rcpp::wrap(penRankCpp(X, n_lambda, lambda_min, crit, dt, n_cv, alpha));
     return rcpp_result_gen;
 END_RCPP
 }

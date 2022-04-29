@@ -61,16 +61,16 @@ penAlphaCppAggregated <- function(Y, Z, r, alpha_init, beta_init, crit, rho_glas
     .Call('_eegCA_penAlphaCppAggregated', PACKAGE = 'eegCA', Y, Z, r, alpha_init, beta_init, crit, rho_glasso, maxiter, conv, cutoff, glmnetthresh, calculate_ab)
 }
 
-penAdaptNuclearCpp <- function(X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma, mu) {
-    .Call('_eegCA_penAdaptNuclearCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma, mu)
+penAdaptNuclearCpp <- function(X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma, alpha) {
+    .Call('_eegCA_penAdaptNuclearCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, crit, dt, n_cv, w_gamma, alpha)
 }
 
-penNuclearCpp <- function(X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, mu) {
-    .Call('_eegCA_penNuclearCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, mu)
+penNuclearCpp <- function(X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, alpha) {
+    .Call('_eegCA_penNuclearCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, miniter, maxiter, crit, dt, n_cv, thresh, alpha)
 }
 
-penRankCpp <- function(X, n_lambda, lambda_min, crit, dt, n_cv, mu) {
-    .Call('_eegCA_penRankCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, crit, dt, n_cv, mu)
+penRankCpp <- function(X, n_lambda, lambda_min, crit, dt, n_cv, alpha) {
+    .Call('_eegCA_penRankCpp', PACKAGE = 'eegCA', X, n_lambda, lambda_min, crit, dt, n_cv, alpha)
 }
 
 accu2 <- function(obj) {

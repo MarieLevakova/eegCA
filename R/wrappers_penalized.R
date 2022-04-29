@@ -223,7 +223,7 @@ pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
 
 pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12,
                            miniter = 10, maxiter = 100,
-                           dt = 1, crit = "CV", n.cv = 100, thresh = 1e-6, mu = 0.01){
+                           dt = 1, crit = "CV", n.cv = 100, thresh = 1e-6, alpha = 0.01){
 
   p <- dim(X)[2]
 
@@ -233,7 +233,7 @@ pen.PI.nuclear <- function(X, n.lambda, lambda.min = 1e-12,
 
   # Calling cpp function
   out <- penNuclearCpp(X, n.lambda, lambda.min, miniter, maxiter, crit.int,
-                       dt, n.cv, thresh, mu)
+                       dt, n.cv, thresh, alpha)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]
@@ -402,6 +402,7 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
 
   if(r == 1){
     ALPHA.Sparse  <- matrix(coef(lm(Ystd ~ Z.r - 1)), ncol = 1)
+    lambda.final <- alpha.opt <- NA
   } else {
 
     if(equal.penalty){
@@ -484,7 +485,7 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
   OMEGA <- (t(res) %*% res)/N
 
   return(list(ALPHA = ALPHA.Sparse/dt, BETA = BETA, PI = PI/dt, OMEGA = OMEGA/dt,
-              MU = MU/dt), lambda.lasso = lambda.final, lambda.ridge = alpha.opt)
+              MU = MU/dt, lambda.lasso = lambda.final, lambda.ridge = alpha.opt))
 }
 
 # Penalty on alpha in EEG data (linearly dependent channels)
@@ -856,7 +857,8 @@ pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt))
 }
 
-pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.cv = 100, mu = 0.01){
+pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV",
+                        n.cv = 100, alpha = 0.01){
 
   p <- dim(X)[2]
 
@@ -865,7 +867,7 @@ pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.
   crit.int <- which(crit.vector ==  crit) - 1
 
   # Calling cpp function
-  out <- penRankCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, mu)
+  out <- penRankCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, alpha)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]
@@ -882,7 +884,7 @@ pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV", n.
 }
 
 pen.PI.nuclearAdapt <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV",
-                                n.cv = 100, w.gamma = 0, mu = 0.01){
+                                n.cv = 100, w.gamma = 0, alpha = 0.01){
 
   p <- dim(X)[2]
 
@@ -891,7 +893,7 @@ pen.PI.nuclearAdapt <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = 
   crit.int <- which(crit.vector ==  crit) - 1
 
   # Calling cpp function
-  out <- penAdaptNuclearCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, w.gamma, mu)
+  out <- penAdaptNuclearCpp(X, n.lambda, lambda.min, crit.int, dt, n.cv, w.gamma, alpha)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]
