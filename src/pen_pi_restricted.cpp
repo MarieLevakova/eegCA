@@ -93,7 +93,7 @@ arma::mat penPiLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init, double la
         w[ii] = 1;
       }
     } else {
-      w[ii] = 0.1/pow(ii,q);
+      w[ii] = 0.001/pow(ii,q);
     }
 
     mat matToProj = PI_free + w[ii]*Zstd.t()*(Ystd-Zstd*PI_free);
@@ -226,15 +226,20 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
     for(int cv_run=0; cv_run<n_cv; cv_run++){
       // Divide data into 5 folds
       ivec folds = randi<ivec>(N, distr_param(1, 5));
+
       for(int ii=0; ii<5; ii++){
         mat Ystd_cv = Ystd.rows(find(folds!=ii));
         mat Zstd_cv = Zstd.rows(find(folds!=ii));
-        Pi_init = zeros<mat>(p,p); //(Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv;
+
+        Pi_init = (Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv;
+
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
-          mat pen_out = penPiLoop(Ystd_cv, Zstd_cv, Pi_init, lambda, r, maxiter,
+          mat pen_out = penPiLoop(Ystd_cv, Zstd_cv, Pi_init, lambda, r, maxiter+1,
                                   w_auto, q, weights);
+
           Pi_restricted = pen_out(span(0,p-1), span(0,p-1));
+
           Pi_init = Pi_restricted;
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
           cv(i) = cv(i) + trace(res*res.t())/(N*p*n_cv);
