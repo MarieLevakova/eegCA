@@ -133,12 +133,12 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
         mat U_cv;
         vec d_cv;
         mat V_cv;
-        arma::svd(U_cv, d_cv, V_cv, Zstd*Pi_ols_cv);
+        arma::svd(U_cv, d_cv, V_cv, Zstd_cv*Pi_ols_cv);
 
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
 
-          mat Pi_restricted = penAdaptNuclearLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda*alpha, U_cv, d_cv, V_cv, w_gamma)/(1+lambda*(1-alpha));
+          mat Pi_restricted = penAdaptNuclearLoop(Ystd_cv, Zstd_cv, Pi_ols_cv, lambda*alpha, U_cv, d_cv, V_cv, w_gamma)/(1+lambda*(1-alpha));
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
           cv(i) = cv(i) + trace(res*res.t())/(N*p*n_cv);
         }

@@ -175,14 +175,14 @@ arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min,
         mat U_cv;
         vec d_cv;
         mat V_cv;
-        arma::svd(U_cv, d_cv, V_cv, Zstd*Pi_ols_cv);
+        arma::svd(U_cv, d_cv, V_cv, Zstd_cv*Pi_ols_cv);
 
         // int r_cv = d_cv.n_elem;
 
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
 
-          mat Pi_restricted = penRankLoop(Ystd_cv, Zstd_cv, Pi_ols, lambda, conv_to<mat>::from(V_cv), d_cv, alpha);
+          mat Pi_restricted = penRankLoop(Ystd_cv, Zstd_cv, Pi_ols_cv, lambda, conv_to<mat>::from(V_cv), d_cv, alpha);
           mat res = Ystd.rows(find(folds==ii)) - Zstd.rows(find(folds==ii))*Pi_restricted;
           cv(i) = cv(i) + trace(res*res.t())/(N*p*n_cv);
         }
@@ -195,7 +195,7 @@ arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min,
   lambda_opt = lambda_seq(crit_value.index_min());
 
   // Fit with an optimal lambda
-  Pi_restricted = penRankLoop(Ystd, Zstd, Pi_ols, lambda, conv_to<mat>::from(V_svd), d, alpha);
+  Pi_restricted = penRankLoop(Ystd, Zstd, Pi_ols, lambda_opt, conv_to<mat>::from(V_svd), d, alpha);
 
   // Final unnormalization
   Pi_restricted = Pi_restricted.t();
