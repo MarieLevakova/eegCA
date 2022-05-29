@@ -159,7 +159,7 @@ arma::mat penPiLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init, double la
 
 arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
                    int maxiter, int crit, double dt, bool w_auto, int n_cv,
-                   double q, arma::mat weights){
+                   double q, arma::mat weights, double lambda_max){
 
   int N = X.n_rows-1;   // Number of observations
   int p = X.n_cols;     // Dimension of the system
@@ -181,7 +181,9 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
   mat Zstd = (Z - ones<mat>(N,1)*meanZ)*diagmat(1/sdZ);
 
   // Calculate the sequence of lambdas
-  double lambda_max = (abs(Ystd.t() * Zstd)/N).max();
+  // if(lambda_max==0){
+  lambda_max = (abs(Ystd.t() * Zstd)/N).max();
+  // }
   vec lambda_seq = logspace(log10(lambda_max), log10(lambda_min), n_lambda);
   vec crit_value = zeros<vec>(n_lambda);
 
@@ -189,7 +191,7 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
   double lambda;
   double lambda_opt;
   mat Pi_restricted;
-  mat Pi_init = zeros<mat>(p,p); //(Zstd.t()*Zstd).i()*Zstd.t()*Ystd;
+  mat Pi_init = zeros<mat>(p,p); //(Zstd.t()*Zstd).i()*Zstd.t()*Ystd; //
 
   if(crit != 0){ //lambda not chosen by crossvalidation
     for(int i=0; i<n_lambda; i++){
@@ -231,7 +233,7 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
         mat Ystd_cv = Ystd.rows(find(folds!=ii));
         mat Zstd_cv = Zstd.rows(find(folds!=ii));
 
-        Pi_init = (Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv;
+        Pi_init = zeros<mat>(p,p); //(Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv;
 
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
@@ -253,9 +255,10 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
 
   // Fit with an optimal lambda
   // (Go through the whole sequence of lambdas to achieve warm starts)
-  Pi_init = (Zstd.t()*Zstd).i()*Zstd.t()*Ystd;
-  mat PI_iter;
-  mat objective_iter;
+  Pi_init = zeros<mat>(p,p); //(Zstd.t()*Zstd).i()*Zstd.t()*Ystd;
+  mat PI_iter = zeros<mat>(maxiter-1,p*p);
+  mat objective_iter = zeros<vec>(maxiter-1);
+  mat Pi_lambda_mat = zeros<mat>(p,p);
   mat Pi_lambda = zeros<mat>(n_lambda, p*p);
   vec w = zeros<vec>(maxiter);
   // vec iter_lambda = zeros<vec>(n_lambda);
@@ -263,17 +266,22 @@ arma::mat penPiCpp(arma::mat X, int n_lambda, double lambda_min, int r,
   for(int i=0; i<n_lambda; i++){
     lambda = lambda_seq(i);
 
-    mat pen_out = penPiLoop(Ystd, Zstd, Pi_init, lambda, r, maxiter, w_auto, q,
+    mat pen_out = penPiLoop(Ystd, Zstd, Pi_init, lambda, r, maxiter+1, w_auto, q,
                             weights);
     Pi_restricted = pen_out(span(0, p-1), span(0, p-1));
     Pi_init = Pi_restricted;
-    Pi_lambda.row(n_lambda-i-1) = reshape(Pi_restricted, 1, p*p);
+    Pi_lambda_mat = Pi_restricted.t();
+    for(int ir=0; ir<p; ir++){
+      Pi_lambda_mat.row(ir) = Pi_lambda_mat.row(ir)*diagmat(sdY(ir)/sdZ);
+    }
+    Pi_lambda.row(n_lambda-i-1) = reshape(Pi_lambda_mat, 1, p*p);
     // iter_lambda(n_lambda-i-1) = pen_out(0,p);
     if(lambda == lambda_opt){
       Pi_final = Pi_restricted;
       PI_iter = pen_out(span(p, p+maxiter-2), span(0, p*p-1));
       objective_iter = pen_out(span(p, p+maxiter-2), p*p);
       w = pen_out(span(p, p+maxiter-1), p*p+1);
+      // break;
     }
   }
 

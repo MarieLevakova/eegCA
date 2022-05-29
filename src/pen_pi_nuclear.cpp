@@ -45,8 +45,10 @@ arma::mat penNuclearLoop(arma::mat Ystd, arma::mat Zstd, arma::mat Pi_init,
 
     vec d_soft = svd_d;
     for(int jj = 0; jj < p; jj++){
-      if(d_soft(jj)>lambda*alpha/2) {
-        d_soft(jj) = d_soft(jj) - lambda/2;
+      if(d_soft(jj)>lambda*alpha/L) {
+        d_soft(jj) = d_soft(jj) - lambda*alpha/L;
+      } else {
+        d_soft(jj) = 0;
       }
     }
     Pi_previous = Pi_restricted;
@@ -127,15 +129,15 @@ arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   mat Zstd = (Z - ones<mat>(N,1)*meanZ); // *diagmat(1/sdZ);
 
   // Calculate the sequence of lambdas
-  double lambda_max = (abs(Ystd.t() * Zstd)/N).max()/alpha;
-  vec lambda_seq = logspace(log10(lambda_max), log10(lambda_min), n_lambda);
+  double lambda_max = norm(Ystd.t() * Zstd, "fro")/alpha;
+  vec lambda_seq = linspace(lambda_min, lambda_max, n_lambda);
   vec crit_value = zeros<vec>(n_lambda);
 
   // Choose optimal lambda
   double lambda;
   double lambda_opt;
   mat Pi_restricted;
-  mat Pi_init = zeros<mat>(p,p);
+  mat Pi_init = (Zstd.t()*Zstd).i()*Zstd.t()*Ystd; //zeros<mat>(p,p);
 
   mat  pen_out;
   if(crit != 0){ //lambda not chosen by crossvalidation
@@ -176,7 +178,7 @@ arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
       for(int ii=0; ii<5; ii++){
         mat Ystd_cv = Ystd.rows(find(folds!=ii));
         mat Zstd_cv = Zstd.rows(find(folds!=ii));
-        Pi_init = zeros<mat>(p,p); // (Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv;
+        Pi_init = (Zstd_cv.t()*Zstd_cv).i()*Zstd_cv.t()*Ystd_cv; //zeros<mat>(p,p); //
         for(int i=0; i<n_lambda; i++){
           lambda = lambda_seq(i);
           pen_out = penNuclearLoop(Ystd_cv, Zstd_cv, Pi_init, lambda,
@@ -195,7 +197,7 @@ arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
 
   // Fit with an optimal lambda
   // (Go through the whole sequence of lambdas to achieve warm starts)
-  Pi_init = zeros<mat>(p,p); // (Zstd.t()*Zstd).i()*Zstd.t()*Ystd;
+  Pi_init = (Zstd.t()*Zstd).i()*Zstd.t()*Ystd;//zeros<mat>(p,p); //
   mat PI_iter;
   mat objective_iter;
   mat Pi_lambda = zeros<mat>(n_lambda, p*p);
@@ -208,7 +210,7 @@ arma::mat penNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
                              thresh, alpha);
     Pi_restricted = pen_out(span(0, p-1), span(0, p-1));
     Pi_init = Pi_restricted;
-    Pi_lambda.row(n_lambda-i-1) = reshape(Pi_restricted, 1, p*p);
+    Pi_lambda.row(i) = reshape(Pi_restricted, 1, p*p);
     iter_lambda(n_lambda-i-1) = pen_out(0,p);
     if(lambda == lambda_opt){
       Pi_final = Pi_restricted;

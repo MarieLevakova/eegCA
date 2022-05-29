@@ -48,13 +48,10 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
     lambda.max <- 0
     lambda.min <- NA
     for(i.r in 1:p){
-      penalty.factor <- rep(1, p)
-      penalty.factor[i.r] <- 0
       determine_lambdasequence <- glmnet(y = Ystd[,i.r], x = Zstd,
                                         intercept = F,
                                         family = "gaussian",
-                                        alpha = alpha.i,
-                                        penalty.factor = penalty.factor)
+                                        alpha = alpha.i)
       lambda.max <- max(c(lambda.max, determine_lambdasequence$lambda))
       lambda.min <- min(c(lambda.min, determine_lambdasequence$lambda), na.rm = T)
     }
@@ -75,8 +72,7 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
                                      intercept = F,
                                      family = "gaussian",
                                      lambda = lambda.seq,
-                                     alpha = alpha.i,
-                                     penalty.factor = penalty.factor)
+                                     alpha = alpha.i)
           pi.select[,i.r,] <- matrix(determine_lambda$beta, nrow = p)
         }
         for(ii in 1:n.lambda){
@@ -101,8 +97,7 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
                                      intercept = F,
                                      family = "gaussian",
                                      lambda = lambda.seq,
-                                     alpha = alpha.i,
-                                     penalty.factor = penalty.factor)
+                                     alpha = alpha.i)
           pi.select[,i.r,] <- matrix(determine_lambda$beta, nrow = p)
         }
         for(ii in 1:n.lambda){
@@ -127,8 +122,7 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
                                      intercept = F,
                                      family = "gaussian",
                                      lambda = lambda.seq,
-                                     alpha = alpha.i,
-                                     penalty.factor = penalty.factor)
+                                     alpha = alpha.i)
           pi.select[,i.r,] <- matrix(determine_lambda$beta, nrow = p)
         }
         for(ii in 1:n.lambda){
@@ -154,8 +148,7 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
                                           intercept = F,
                                           family = "gaussian",
                                           lambda = lambda.seq,
-                                          alpha = alpha.i,
-                                          penalty.factor = penalty.factor)
+                                          alpha = alpha.i)
             cv <- cv + 1/(n.cv*p)*determine_lambda$cvm
           }
         }
@@ -169,6 +162,7 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   lambda.final <- lambda.opt[which.min(crit.opt)]
 
   # Fit the final model
+  PI.seq <- matrix(NA, nrow = length(lambda.seq), ncol = p^2)
   for(i.r in 1:p){
     penalty.factor <- rep(1, p)
     penalty.factor[i.r] <- 0
@@ -176,8 +170,10 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
                          standardize = F,
                          intercept = F,
                          alpha = alpha.opt,
-                         family = "gaussian",
-                         penalty.factor = penalty.factor)
+                         family = "gaussian")
+    for(i in 1:length(lambda.seq)){
+      PI.seq[i, (i.r-1)*p+(1:p)] <- matrix(coef(LASSOfinal, s = lambda.seq[i]), nrow = 1)[-1] %*% diag(sdY[i.r]/sdZ)
+    }
     PI.Sparse[i.r,] <- matrix(coef(LASSOfinal, s = lambda.final), nrow = 1)[-1] %*% diag(sdY[i.r]/sdZ)
   }
 
@@ -186,10 +182,11 @@ pen.PI.unrestricted <- function(yt, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   Omega.hat <- (t(res) %*% res)/N
 
   return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt,
-              lambda = lambda.final, alpha = alpha.opt))
+              lambda = lambda.final, alpha = alpha.opt, lambda.seq = lambda.seq,
+              PI.seq = PI.seq))
 }
 
-pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
+pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, lambda.max = 0, r, maxiter = 100,
                               dt = 1, crit = "CV", w.auto = TRUE, n.cv = 100, q = 2,
                               weights = matrix(1, nrow = ncol(X), ncol = ncol(X))){
 
@@ -201,7 +198,7 @@ pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
 
   # Calling cpp function
   out <- penPiCpp(X, n.lambda, lambda.min, r, maxiter, crit.int, dt,
-                  w.auto, n.cv, q, t(weights))
+                  w.auto, n.cv, q, t(weights), lambda.max)
 
   # Extracting results from the cpp output
   PI <- out[1:p,1:p]
@@ -217,7 +214,7 @@ pen.PI.restricted <- function(X, n.lambda, lambda.min = 1e-12, r, maxiter = 100,
 
   return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
               PI.iter = PI.iter, objective.iter = objective.iter, w = w,
-              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq),
+              lambda.seq = lambda.seq, crit = crit, crit.seq = rev(crit.seq),
               Pi.seq = Pi.seq))
 }
 
@@ -403,6 +400,7 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
   if(r == 1){
     ALPHA.Sparse  <- matrix(coef(lm(Ystd ~ Z.r - 1)), ncol = 1)
     lambda.final <- alpha.opt <- NA
+    lambda.seq <- ALPHA.seq <- PI.seq <- NA
   } else {
 
     if(equal.penalty){
@@ -444,6 +442,22 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
                              alpha = alpha.opt)
         ALPHA.Sparse[i.r,] <- matrix(coef(LASSOfinal, s = lambda.final), nrow = 1)[-1]
       }
+
+      ALPHA.seq <- matrix(NA, nrow = length(lambda.seq), ncol = p*r)
+      PI.seq <- matrix(NA, nrow = length(lambda.seq), ncol = p*p)
+      for(i in 1:length(lambda.seq)){
+        ALPHA.aux <- matrix(NA, nrow = p, ncol = r)
+        for(i.r in 1:p){
+          LASSOaux <- glmnet(y = Ystd[,i.r], x = Z.r, intercept = F,
+                               lambda = lambda.seq, family = "gaussian",
+                               alpha = alpha.opt)
+          ALPHA.aux[i.r,] <- matrix(coef(LASSOaux, s = lambda.seq[i]), nrow = 1)[-1]
+        }
+        PI.aux <- ALPHA.aux %*% t(BETA)
+        ALPHA.seq[i,] <- matrix(ALPHA.aux, ncol = 1)
+        PI.seq[i,] <- matrix(PI.aux, ncol = 1)
+      }
+
     } else {
       alpha.opt <- lambda.final <- rep(NA, p)
       for(i.r in 1:p){
@@ -485,7 +499,8 @@ pen.alpha <- function(X, r, dt = 1, equal.penalty = F, n.lambda = 100, n.cv = 10
   OMEGA <- (t(res) %*% res)/N
 
   return(list(ALPHA = ALPHA.Sparse/dt, BETA = BETA, PI = PI/dt, OMEGA = OMEGA/dt,
-              MU = MU/dt, lambda.lasso = lambda.final, lambda.ridge = alpha.opt))
+              MU = MU/dt, lambda.lasso = lambda.final, lambda.ridge = alpha.opt,
+              lambda.seq = lambda.seq, ALPHA.seq = ALPHA.seq, PI.seq = PI.seq))
 }
 
 # Penalty on alpha in EEG data (linearly dependent channels)
@@ -639,111 +654,6 @@ pen.alpha.eeg <- function(Y, Z, r, dt = 1, equal.penalty = F, n.lambda = 100, n.
               MU = MU/dt, R2 = R2, lambda.lasso = lambda.final, lambda.ridge = alpha.opt))
 }
 
-# Row sparse penalization of alpha
-pen.alpha.rowSparse <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
-                   lambda, n.lambda = 100, n.cv = 10, thresh = 1e-12,
-                   maxit = 1e6, dt = 1, psi = 2){
-  Y <- diff(X)
-  N <- dim(Y)[1]
-  p <- dim(Y)[2]
-  Z <- X[1:N,]
-
-  # Standardize variables
-  meanY <- apply(Y, 2, mean)
-  sdY <- apply(Y, 2, sd)
-  Ystd <- (Y - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanY))) #%*% diag(1/sdY)
-
-  meanZ <- apply(Z, 2, mean)
-  sdZ <- apply(Z, 2, sd)
-  Zstd <- (Z - matrix(1, nrow = N, ncol = 1) %*% t(as.matrix(meanZ))) #%*% diag(1/sdZ)
-
-  # Get the cointegration matrix by Johansen procedure
-  fit.johansen <- johansenAggregated(Ystd, Zstd, r = p, dt = dt, intercept = F, normalize = F)$PI
-
-  # Construct a new predictor matrix
-  beta.full <- fit.johansen$beta
-  Z.new <- Zstd %*% beta.full
-
-  alpha.Sparse <- matrix(NA, nrow = p, ncol = p)
-
-  # Determine the lambda sequence
-  determine_lambdasequence <- glmnet(y = Ystd, x = Z.new,
-                                     intercept = F,
-                                     family = "mgaussian")
-
-  lambda.seq <- determine_lambdasequence$lambda
-  n.lambda <- length(lambda.seq)
-
-  if(crit=="fixed"){
-    lambda.opt[i.r] <- lambda
-  } else {
-
-
-    if(crit!="CV"){
-      alpha.select <- array(0, dim = c(p, p, n.lambda))
-      for(i in 1:p){
-        alpha.select[,i,] <- as.matrix(determine_lambdasequence$beta[[i]])
-      }
-
-      aic <- rep(NA, n.lambda)
-      bic <- rep(NA, n.lambda)
-      hq <- rep(NA, n.lambda)
-      for(ii in 1:n.lambda){
-        N <- dim(Ystd)[1]
-        k <- sum((Smatalpha.select[,,ii] %*% t(beta.full))!=0)
-        res <- Ystd - Z.new %*% alpha.select[,,ii]
-        Omega.select <- (t(res) %*% res)/N
-        Omega.inv <- solve(Omega.select)
-        aic[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + 2*k +
-          sum(diag(res %*% Omega.inv %*% t(res)))
-        bic[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + k*log(N*p) +
-          sum(diag(res %*% Omega.inv %*% t(res)))
-        hq[ii] <- N*p*log(2*pi) + N*log(det(Omega.select)) + 2*k*log(log(N*p)) +
-          sum(diag(res %*% Omega.inv %*% t(res)))
-      }
-      if(crit=="AIC"){
-        lambda.opt <- lambda.seq[which.min(aic)]
-      }
-      if(crit=="BIC"){
-        lambda.opt <- lambda.seq[which.min(bic)]
-      }
-      if(crit=="HQ"){
-        lambda.opt <- lambda.seq[which.min(hq)]
-      }
-    }
-    if(crit=="CV"){
-      cv <- rep(0, n.lambda)
-      for(i.cv in 1:n.cv){
-        determine_lambda <- cv.glmnet(y = Ystd, x = Z.new,
-                                      intercept = F,
-                                      family = "mgaussian")
-        cv <- cv + 1/(n.cv*p)*determine_lambda$cvm
-      }
-      lambda.opt <- lambda.seq[which.min(cv)]
-    }
-  }
-
-  # Fit the final model
-  LASSOfinal <- glmnet(y = Ystd, x = Z.new,
-                       intercept = F,
-                       family = "mgaussian")
-  alpha.Sparse <- matrix(0, nrow = p, ncol = p)
-  for(i in 1:p){
-    alpha.Sparse[,i] <- as.matrix(coef(LASSOfinal, s = lambda.opt)[[i]])[-1]
-  }
-  PI.Sparse <- alpha.Sparse %*% t(beta.full)
-  # for(i in 1:p){
-  #   PI.Sparse[,i] <- PI.Sparse[,i] %*% diag(sdY[i]/sdZ)
-  # }
-
-  mu.hat <- meanY - PI.Sparse %*% as.matrix(meanZ, ncol =1)
-  res <- Y - matrix(1, nrow = N, ncol = 1) %*% t(mu.hat) - Z %*% t(PI.Sparse)
-  Omega.hat <- (t(res) %*% res)/N
-
-  return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt))
-}
-
-
 # Unrestricted penalized estimation of Pi
 pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
                                 lambda, n.lambda = 100, n.cv = 10, thresh = 1e-12,
@@ -780,8 +690,9 @@ pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   }
   determine_lambdasequence <- glmnet(y = Ystd, x = ZS,
                                      intercept = F,
-                                     penalty.factor = penalty.factor^psi,
-                                     family = "mgaussian")
+                                     penalty.factor = 1/(penalty.factor^psi),
+                                     family = "mgaussian",
+                                     nlambda = n.lambda)
 
   lambda.seq <- determine_lambdasequence$lambda
   n.lambda <- length(lambda.seq)
@@ -828,7 +739,8 @@ pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
       for(i.cv in 1:n.cv){
         determine_lambda <- cv.glmnet(y = Ystd, x = ZS,
                                       intercept = F,
-                                      penalty.factor = penalty.factor^psi,
+                                      penalty.factor = 1/(penalty.factor^psi),
+                                      lambda = lambda.seq,
                                       family = "mgaussian")
         cv <- cv + 1/(n.cv*p)*determine_lambda$cvm
       }
@@ -839,13 +751,24 @@ pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   # Fit the final model
   LASSOfinal <- glmnet(y = Ystd, x = ZS,
                        intercept = F,
-                       penalty.factor = penalty.factor^psi,
+                       penalty.factor = 1/(penalty.factor^psi),
                        family = "mgaussian")
   R.Sparse <- matrix(0, nrow = p, ncol = p)
   for(i in 1:p){
     R.Sparse[,i] <- as.matrix(coef(LASSOfinal, s = lambda.opt)[[i]])[-1]
   }
   PI.Sparse <- t(Smat %*% R.Sparse)
+  R.seq <- matrix(NA, nrow = length(lambda.seq), ncol = p^2)
+  PI.seq <- matrix(NA, nrow = length(lambda.seq), ncol = p^2)
+  for(i in 1:length(lambda.seq)){
+    R.aux <- matrix(NA, nrow = p, ncol = p)
+    for(i.p in 1:p){
+      R.aux[,i.p] <- as.matrix(coef(LASSOfinal, s = lambda.seq[i])[[i.p]])[-1]
+    }
+    Pi.aux <- t(Smat %*% R.aux)
+    R.seq[i,] <- matrix(R.aux, ncol = 1)
+    PI.seq[i,] <- matrix(Pi.aux, ncol = 1)
+  }
   # for(i in 1:p){
   #   PI.Sparse[,i] <- PI.Sparse[,i] %*% diag(sdY[i]/sdZ)
   # }
@@ -854,7 +777,9 @@ pen.qr <- function(X, crit = c("fixed", "CV", "AIC", "BIC", "HQ"),
   res <- Y - matrix(1, nrow = N, ncol = 1) %*% t(mu.hat) - Z %*% t(PI.Sparse)
   Omega.hat <- (t(res) %*% res)/N
 
-  return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt))
+  return(list(PI = PI.Sparse/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt,
+              lambda = lambda.opt, S = Smat, R = R.Sparse,
+              lambda.seq = lambda.seq, PI.seq = PI.seq, R.seq = R.seq))
 }
 
 pen.PI.rank <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = "CV",
@@ -902,7 +827,9 @@ pen.PI.nuclearAdapt <- function(X, n.lambda, lambda.min = 1e-12, dt = 1, crit = 
   lambda <- out[1,2*p+2]
   lambda.seq <- out[(p+1):(p+n.lambda), 1]
   crit.seq <- out[(p+1):(p+n.lambda), 2]
+  PI.seq <- out[(p+n.lambda):(p+1), 3:(p^2+2)] # reverse the order
 
   return(list(PI = PI, MU = MU, OMEGA = OMEGA, lambda = lambda,
-              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq)))
+              lambda.seq = rev(lambda.seq), crit = crit, crit.seq = rev(crit.seq),
+              PI.seq = PI.seq))
 }

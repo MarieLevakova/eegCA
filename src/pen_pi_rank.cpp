@@ -111,8 +111,8 @@ arma::mat penRankCpp(arma::mat X, int n_lambda, double lambda_min,
   // int r = d.n_elem;
 
   // Calculate the sequence of lambdas
-  double lambda_max = max(d)*sqrt(alpha);
-  vec lambda_seq = logspace(log10(lambda_max), log10(lambda_min), n_lambda);
+  double lambda_max = max(d)/alpha;
+  vec lambda_seq = linspace(lambda_max, lambda_min, n_lambda);
   vec crit_value = zeros<vec>(n_lambda);
   vec aic = zeros<vec>(n_lambda);
   vec bic = zeros<vec>(n_lambda);

@@ -92,33 +92,41 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   double lambda;
   double lambda_opt;
   mat Pi_restricted;
+  mat Pi_iter = zeros<mat>(n_lambda, p*p);
 
-  if(crit != 0){ //lambda not chosen by crossvalidation
-    for(int i=0; i<n_lambda; i++){
-      lambda = lambda_seq(i);
+  //lambda not chosen by crossvalidation
+  for(int i=0; i<n_lambda; i++){
+    lambda = lambda_seq(i);
 
-      Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda*alpha, U, d, V, w_gamma)/(1+lambda*(1-alpha));
+    Pi_restricted = penAdaptNuclearLoop(Ystd, Zstd, Pi_ols, lambda*alpha, U, d, V, w_gamma)/(1+lambda*(1-alpha));
 
-      int k = accu(conv_to<imat>::from(Pi_restricted!=zeros<mat>(p,p)));
-      mat res = Ystd - Zstd * Pi_restricted;
-      mat Omega_select = (res.t() * res)/N;
-      mat Omega_inv = Omega_select.i();
+    int k = accu(conv_to<imat>::from(Pi_restricted!=zeros<mat>(p,p)));
+    mat res = Ystd - Zstd * Pi_restricted;
+    mat Omega_select = (res.t() * res)/N;
+    mat Omega_inv = Omega_select.i();
 
-      double logdet_Omega;
-      double sign;
+    double logdet_Omega;
+    double sign;
 
-      log_det(logdet_Omega, sign, Omega_select);
+    log_det(logdet_Omega, sign, Omega_select);
 
-      if(crit==1) { // AIC
-        crit_value(i) = N*p*log(2*datum::pi) + N*logdet_Omega + 2*k + trace(res*Omega_inv*res.t());
-      } else if(crit==2) { // BIC
-        crit_value(i) = N*p*log(2*datum::pi) + N*logdet_Omega + k*log(N) + trace(res*Omega_inv*res.t());
-      } else { // HQ
-        crit_value(i) = N*p*log(2*datum::pi) + N*logdet_Omega + 2*k*log(log(N)) + trace(res*Omega_inv*res.t());
-      }
+    if(crit==1) { // AIC
+      crit_value(i) = N*p*log(2*datum::pi) + N*logdet_Omega + 2*k + trace(res*Omega_inv*res.t());
+    } else if(crit==2) { // BIC
+      crit_value(i) = N*p*log(2*datum::pi) + N*logdet_Omega + k*log(N) + trace(res*Omega_inv*res.t());
+    } else { // HQ
+      crit_value(i) = N*p*log(2*datum::pi) + N*logdet_Omega + 2*k*log(log(N)) + trace(res*Omega_inv*res.t());
     }
-    lambda_opt = lambda_seq(crit_value.index_min());
-  } else { // CV
+
+    Pi_restricted = Pi_restricted.t();
+    for(int ir=0; ir<p; ir++){
+      Pi_restricted.row(ir) = Pi_restricted.row(ir)*diagmat(sdY(ir)/sdZ);
+    }
+    Pi_iter.row(i) = reshape(Pi_restricted, 1, p*p);
+  }
+  lambda_opt = lambda_seq(crit_value.index_min());
+
+  if(crit==0){ // CV
     vec cv = zeros<vec>(n_lambda);
 
     // Run crossvalidation n_cv times
@@ -170,6 +178,7 @@ arma::mat penAdaptNuclearCpp(arma::mat X, int n_lambda, double lambda_min,
   mat_output(0, 2*p+1) = lambda_opt;
   mat_output(span(p, p+n_lambda-1), 0) = lambda_seq;
   mat_output(span(p, p+n_lambda-1), 1) = crit_value;
+  mat_output(span(p, p+n_lambda-1), span(2, p*p+1)) = Pi_iter;
 
   return mat_output;
 }

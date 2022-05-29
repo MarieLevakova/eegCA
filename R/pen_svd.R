@@ -143,7 +143,8 @@ pen.svd <- function(X, r, dt = 1, crit = "CV", n.lambda = 101,
   res <- Y - matrix(1, nrow = N, ncol = 1) %*% t(mu.hat) - Z %*% t(Pi.final)
   Omega.hat <- (t(res) %*% res)/N
 
-  return(list(PI = Pi.final/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt))
+  return(list(PI = Pi.final/dt, MU = mu.hat/dt, OMEGA = Omega.hat/dt, lambda = lambda.opt,
+              lambda.seq = lambda.seq))
 }
 
 penSvdLoop <- function(Ystd, Zstd, svd.u, svd.d, svd.v, r, w.u, w.v, w.d,
